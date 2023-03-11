@@ -1,11 +1,11 @@
 {
   "name": "@jprayner/ecoclient",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Command-line utility for performing Econet operations using Piconet hardware.",
   "bin": {
-    "ecoclient": "index.js"
+    "ecoclient": "./build/index.js"
   },
-  "main": "index.js",
+  "main": "build/index.js",
   "scripts": {
     "prebuild": "node -p \"'export const PKG_VERSION = \\'' + require('./package.json').version + '\\';'\" > src/version.ts",
     "build": "tsc",
