@@ -21,5 +21,5 @@ jobs:
           node-version: ${{ matrix.node-version }}
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci --registry https://registry.npmjs.org
-      - run: npm run lint
-      - run: npm run test
+      - run: npm run lint --registry https://registry.npmjs.org
+      - run: npm run test --registry https://registry.npmjs.org
