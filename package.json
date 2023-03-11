@@ -41,8 +41,9 @@
     "url": "https://github.com/jprayner/ecoclient/issues"
   },
   "devDependencies": {
-    "@types/node": "^16.18.12",
     "@types/jest": "^27.5.2",
+    "@types/node": "^16.18.12",
+    "@typescript-eslint/eslint-plugin": "^5.54.1",
     "eslint": "^7.32.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-airbnb-typescript": "^17.0.0",
