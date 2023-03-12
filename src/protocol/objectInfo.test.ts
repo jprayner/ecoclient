@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { driver, EconetEvent, RxTransmitEvent } from '@jprayner/piconet-nodejs';
-import { dir } from 'console';
+import { driver } from '@jprayner/piconet-nodejs';
 import { waitForReceiveTxEvent } from '../common';
 import { readDirAccessObjectInfo } from './objectInfo';
 

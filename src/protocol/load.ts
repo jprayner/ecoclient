@@ -2,10 +2,10 @@ import {
   fsControlByte,
   directoryHandles,
   fsPort,
-  responseMatcher,
   standardTxMessage,
   stripCRs,
   waitForReceiveTxEvent,
+  waitForDataOrStatus,
 } from '../common';
 import { driver } from '@jprayner/piconet-nodejs';
 
@@ -47,7 +47,7 @@ export const load = async (serverStation: number, filename: string) => {
     throw new Error(`Load failed: ${message}`);
   }
 
-  if (serverReply.data.length < 20) {
+  if (serverReply.data.length < 26) {
     throw new Error(
       `Malformed response in LOAD from station ${serverStation}: success but not enough data`,
     );
@@ -76,8 +76,8 @@ export const load = async (serverStation: number, filename: string) => {
       replyPort,
     );
     if (dataOrEndEvent.port === replyPort) {
-      if (serverReply.resultCode !== 0x00) {
-        const message = stripCRs(serverReply.data.toString('ascii'));
+      if (dataOrEndEvent.resultCode !== 0x00) {
+        const message = stripCRs(dataOrEndEvent.data.toString('ascii'));
         throw new Error(`Load failed during delivery: ${message}`);
       }
       break;
@@ -98,42 +98,4 @@ export const load = async (serverStation: number, filename: string) => {
     actualSize: data.length,
     data,
   };
-};
-
-const waitForDataOrStatus = async (
-  serverStation: number,
-  controlByte: number,
-  dataPort: number,
-  statusPort: number,
-) => {
-  const rxTransmitEvent = await driver.waitForEvent(
-    responseMatcher(serverStation, 0, controlByte, [dataPort, statusPort]),
-    2000,
-  );
-  if (rxTransmitEvent.type !== 'RxTransmitEvent') {
-    throw new Error(`Unexpected response from station ${serverStation}`);
-  }
-  if (rxTransmitEvent.scoutFrame[5] === statusPort) {
-    if (rxTransmitEvent.dataFrame.length < 6) {
-      throw new Error(`Malformed response from station ${serverStation}`);
-    }
-
-    return {
-      type: 'status',
-      controlByte: rxTransmitEvent.scoutFrame[4],
-      port: rxTransmitEvent.scoutFrame[5],
-      commandCode: rxTransmitEvent.dataFrame[4],
-      resultCode: rxTransmitEvent.dataFrame[5],
-      data: rxTransmitEvent.dataFrame.slice(6),
-    };
-  } else {
-    if (rxTransmitEvent.dataFrame.length < 2) {
-      throw new Error(`Malformed response from station ${serverStation}`);
-    }
-
-    return {
-      type: 'data',
-      data: rxTransmitEvent.dataFrame.slice(4),
-    };
-  }
 };

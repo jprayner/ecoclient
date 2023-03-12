@@ -54,15 +54,11 @@ export const initConnection = async (
   device: string | undefined,
   station: number,
 ) => {
-  console.log('Connecting to board...');
   await driver.connect(device);
 
   driver.addListener(event => {
-    console.log(event);
     if (event.type === 'ErrorEvent') {
-      console.log('========================');
-      console.log(`ERROR: ${event.description}`);
-      console.log('========================\n');
+      console.error(`ERROR: ${event.description}`);
     }
   });
 
@@ -104,6 +100,44 @@ export const waitForReceiveTxEvent = async (
     resultCode: rxTransmitEvent.dataFrame[5],
     data: rxTransmitEvent.dataFrame.slice(6),
   };
+};
+
+export const waitForDataOrStatus = async (
+  serverStation: number,
+  controlByte: number,
+  dataPort: number,
+  statusPort: number,
+) => {
+  const rxTransmitEvent = await driver.waitForEvent(
+    responseMatcher(serverStation, 0, controlByte, [dataPort, statusPort]),
+    2000,
+  );
+  if (rxTransmitEvent.type !== 'RxTransmitEvent') {
+    throw new Error(`Unexpected response from station ${serverStation}`);
+  }
+  if (rxTransmitEvent.scoutFrame[5] === statusPort) {
+    if (rxTransmitEvent.dataFrame.length < 6) {
+      throw new Error(`Malformed response from station ${serverStation}`);
+    }
+
+    return {
+      type: 'status',
+      controlByte: rxTransmitEvent.scoutFrame[4],
+      port: rxTransmitEvent.scoutFrame[5],
+      commandCode: rxTransmitEvent.dataFrame[4],
+      resultCode: rxTransmitEvent.dataFrame[5],
+      data: rxTransmitEvent.dataFrame.slice(6),
+    };
+  } else {
+    if (rxTransmitEvent.dataFrame.length < 2) {
+      throw new Error(`Malformed response from station ${serverStation}`);
+    }
+
+    return {
+      type: 'data',
+      data: rxTransmitEvent.dataFrame.slice(4),
+    };
+  }
 };
 
 export const executeCliCommand = async (
