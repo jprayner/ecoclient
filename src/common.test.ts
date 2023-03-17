@@ -1,7 +1,20 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { driver, EconetEvent, RxTransmitEvent, RxImmediateEvent } from '@jprayner/piconet-nodejs';
+import {
+  driver,
+  EconetEvent,
+  RxTransmitEvent,
+  RxImmediateEvent,
+} from '@jprayner/piconet-nodejs';
 import { stat } from 'fs';
-import { executeCliCommand, fsControlByte, fsPort, initConnection, responseMatcher, waitForAckEvent, waitForDataOrStatus } from './common';
+import {
+  executeCliCommand,
+  fsControlByte,
+  fsPort,
+  initConnection,
+  responseMatcher,
+  waitForAckEvent,
+  waitForDataOrStatus,
+} from './common';
 
 jest.mock('@jprayner/piconet-nodejs');
 const driverMock = jest.mocked(driver, true);
@@ -90,7 +103,12 @@ describe('common.waitForDataOrStatus', () => {
       },
     );
 
-    const result = await waitForDataOrStatus(254, fsControlByte, dataPort, statusPort);
+    const result = await waitForDataOrStatus(
+      254,
+      fsControlByte,
+      dataPort,
+      statusPort,
+    );
     expect(result.type).toEqual('data');
   });
 
@@ -115,7 +133,9 @@ describe('common.waitForDataOrStatus', () => {
       },
     );
 
-    await expect(waitForDataOrStatus(254, fsControlByte, dataPort, statusPort)).rejects.toThrowError('Malformed response from station 254');
+    await expect(
+      waitForDataOrStatus(254, fsControlByte, dataPort, statusPort),
+    ).rejects.toThrowError('Malformed response from station 254');
   });
 
   it('should reject truncated status event', async () => {
@@ -139,7 +159,9 @@ describe('common.waitForDataOrStatus', () => {
       },
     );
 
-    await expect(waitForDataOrStatus(254, fsControlByte, dataPort, statusPort)).rejects.toThrowError('Malformed response from station 254');
+    await expect(
+      waitForDataOrStatus(254, fsControlByte, dataPort, statusPort),
+    ).rejects.toThrowError('Malformed response from station 254');
   });
 
   it('should wait for status event', async () => {
@@ -163,7 +185,12 @@ describe('common.waitForDataOrStatus', () => {
       },
     );
 
-    const result = await waitForDataOrStatus(254, fsControlByte, dataPort, statusPort);
+    const result = await waitForDataOrStatus(
+      254,
+      fsControlByte,
+      dataPort,
+      statusPort,
+    );
     expect(result.type).toEqual('status');
   });
 
@@ -176,7 +203,9 @@ describe('common.waitForDataOrStatus', () => {
       },
     );
 
-    await expect(waitForDataOrStatus(254, fsControlByte, dataPort, statusPort)).rejects.toThrowError('Unexpected response from station 254');
+    await expect(
+      waitForDataOrStatus(254, fsControlByte, dataPort, statusPort),
+    ).rejects.toThrowError('Unexpected response from station 254');
   });
 });
 
@@ -292,7 +321,7 @@ describe('common.executeCliCommand', () => {
 });
 
 describe('common.responseMatcher', () => {
-  it('should successfully match an appropriate response from Piconet', async () => {
+  it('should successfully match an appropriate response from Piconet', () => {
     const matcher = responseMatcher(254, 0, fsControlByte, [fsPort]);
     const result = matcher({
       type: 'RxTransmitEvent',
@@ -303,7 +332,7 @@ describe('common.responseMatcher', () => {
     expect(result).toBe(true);
   });
 
-  it('should not match a undesired response from Piconet', async () => {
+  it('should not match a undesired response from Piconet', () => {
     const matcher = responseMatcher(253, 0, fsControlByte, [fsPort]);
     const result = matcher({
       type: 'RxTransmitEvent',

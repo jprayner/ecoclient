@@ -12,69 +12,48 @@ import { iAm } from './protocol/iAm';
 import { examineDir } from './protocol/examine';
 import { access, bye, cdir, deleteFile } from './protocol/simpleCli';
 import { PKG_VERSION } from './version';
-
-const stringOption = (options: object, key: string): string | undefined => {
-  for (const [k, v] of Object.entries(options)) {
-    if (k === key && typeof v === 'string') {
-      return v;
-    }
-  }
-
-  return undefined;
-};
-
-const intOption = (options: object, key: string): number | undefined => {
-  for (const [k, v] of Object.entries(options)) {
-    if (k === key && typeof v === 'string') {
-      return parseInt(v, 10);
-    }
-  }
-
-  return undefined;
-};
-
-const resolveOptions = (options: object) => {
-  const deviceName = stringOption(options, 'deviceName');
-  const serverStation = intOption(options, 'fileserver');
-  const localStation = intOption(options, 'station');
-  if (typeof localStation === 'undefined') {
-    throw new Error(
-      'You must specify an econet station number for this machine',
-    );
-  }
-  if (typeof serverStation === 'undefined') {
-    throw new Error('You must specify a fileserver number');
-  }
-  return { deviceName, serverStation, localStation };
-};
+import {
+  getLocalStationNum,
+  getServerStationNum,
+  setLocalStationNum,
+  setServerStationNum,
+} from './config';
 
 const commandIAm = async (
   username: string,
   password: string,
   options: object,
 ) => {
-  const { deviceName, serverStation, localStation } = resolveOptions(options);
+  const { deviceName, serverStation, localStation } = await resolveOptions(
+    options,
+  );
   await initConnection(deviceName, localStation);
   await iAm(serverStation, username, password);
   await driver.close();
 };
 
 const commandBye = async (options: object) => {
-  const { deviceName, serverStation, localStation } = resolveOptions(options);
+  const { deviceName, serverStation, localStation } = await resolveOptions(
+    options,
+  );
   await initConnection(deviceName, localStation);
   await bye(serverStation);
   await driver.close();
 };
 
 const commandCdir = async (dirPath: string, options: object) => {
-  const { deviceName, serverStation, localStation } = resolveOptions(options);
+  const { deviceName, serverStation, localStation } = await resolveOptions(
+    options,
+  );
   await initConnection(deviceName, localStation);
   await cdir(serverStation, dirPath);
   await driver.close();
 };
 
 const commandDelete = async (pathToDelete: string, options: object) => {
-  const { deviceName, serverStation, localStation } = resolveOptions(options);
+  const { deviceName, serverStation, localStation } = await resolveOptions(
+    options,
+  );
   await initConnection(deviceName, localStation);
   await deleteFile(serverStation, pathToDelete);
   await driver.close();
@@ -85,14 +64,18 @@ const commandAccess = async (
   accessString: string,
   options: object,
 ) => {
-  const { deviceName, serverStation, localStation } = resolveOptions(options);
+  const { deviceName, serverStation, localStation } = await resolveOptions(
+    options,
+  );
   await initConnection(deviceName, localStation);
   await access(serverStation, pathToSetAccess, accessString);
   await driver.close();
 };
 
 const commandGet = async (filename: string, options: object) => {
-  const { deviceName, serverStation, localStation } = resolveOptions(options);
+  const { deviceName, serverStation, localStation } = await resolveOptions(
+    options,
+  );
   await initConnection(deviceName, localStation);
   const result = await load(serverStation, filename);
   fs.writeFileSync(result.actualFilename, result.data);
@@ -100,7 +83,9 @@ const commandGet = async (filename: string, options: object) => {
 };
 
 const commandPut = async (filename: string, options: object) => {
-  const { deviceName, serverStation, localStation } = resolveOptions(options);
+  const { deviceName, serverStation, localStation } = await resolveOptions(
+    options,
+  );
   await initConnection(deviceName, localStation);
   const fileData = fs.readFileSync(filename);
   const fileTitle = `${path.basename(filename)}\r`;
@@ -109,13 +94,23 @@ const commandPut = async (filename: string, options: object) => {
 };
 
 const commandCat = async (dirPath: string, options: object) => {
-  const { deviceName, serverStation, localStation } = resolveOptions(options);
+  const { deviceName, serverStation, localStation } = await resolveOptions(
+    options,
+  );
   await initConnection(deviceName, localStation);
   const result = await examineDir(serverStation, dirPath);
   console.log(JSON.stringify(result, null, 4));
   const result2 = await readDirAccessObjectInfo(serverStation, dirPath);
   console.log(JSON.stringify(result2, null, 4));
   await driver.close();
+};
+
+const commandSetStation = async (station: string) => {
+  await setLocalStationNum(parseInt(station));
+};
+
+const commandSetFileserver = async (station: string) => {
+  await setServerStationNum(parseInt(station));
 };
 
 const main = () => {
@@ -137,7 +132,7 @@ const main = () => {
     .addOption(
       new Option(
         '-s, --station <number>',
-        'specify local econet station number',
+        'specify local Econet station number',
       ).env('ECONET_STATION'),
     )
     .addOption(
@@ -159,7 +154,7 @@ const main = () => {
     .addOption(
       new Option(
         '-s, --station <number>',
-        'specify local econet station number',
+        'specify local Econet station number',
       ).env('ECONET_STATION'),
     )
     .addOption(
@@ -184,7 +179,7 @@ const main = () => {
     .addOption(
       new Option(
         '-s, --station <number>',
-        'specify local econet station number',
+        'specify local Econet station number',
       ).env('ECONET_STATION'),
     )
     .addOption(
@@ -207,7 +202,7 @@ const main = () => {
     .addOption(
       new Option(
         '-s, --station <number>',
-        'specify local econet station number',
+        'specify local Econet station number',
       ).env('ECONET_STATION'),
     )
     .addOption(
@@ -230,7 +225,7 @@ const main = () => {
     .addOption(
       new Option(
         '-s, --station <number>',
-        'specify local econet station number',
+        'specify local Econet station number',
       ).env('ECONET_STATION'),
     )
     .addOption(
@@ -253,7 +248,7 @@ const main = () => {
     .addOption(
       new Option(
         '-s, --station <number>',
-        'specify local econet station number',
+        'specify local Econet station number',
       ).env('ECONET_STATION'),
     )
     .addOption(
@@ -276,7 +271,7 @@ const main = () => {
     .addOption(
       new Option(
         '-s, --station <number>',
-        'specify local econet station number',
+        'specify local Econet station number',
       ).env('ECONET_STATION'),
     )
     .addOption(
@@ -300,7 +295,7 @@ const main = () => {
     .addOption(
       new Option(
         '-s, --station <number>',
-        'specify local econet station number',
+        'specify local Econet station number',
       ).env('ECONET_STATION'),
     )
     .addOption(
@@ -313,7 +308,66 @@ const main = () => {
     )
     .action(commandAccess);
 
+  program
+    .command('set-fs')
+    .description('set fileserver')
+    .argument('<station>', 'station number')
+    .action(commandSetFileserver);
+
+  program
+    .command('set-station')
+    .description('set Econet station')
+    .argument('<station>', 'station number')
+    .action(commandSetStation);
+
   program.parse(process.argv);
+};
+
+const stringOption = (options: object, key: string): string | undefined => {
+  for (const [k, v] of Object.entries(options)) {
+    if (k === key && typeof v === 'string') {
+      return v;
+    }
+  }
+
+  return undefined;
+};
+
+const intOption = (
+  options: object,
+  key: string,
+  defaultValue: number | undefined,
+): number | undefined => {
+  for (const [k, v] of Object.entries(options)) {
+    if (k === key && typeof v === 'string') {
+      return parseInt(v, 10);
+    }
+  }
+
+  return defaultValue;
+};
+
+const resolveOptions = async (options: object) => {
+  const deviceName = stringOption(options, 'deviceName');
+  const serverStation = intOption(
+    options,
+    'fileserver',
+    await getServerStationNum(),
+  );
+  const localStation = intOption(
+    options,
+    'station',
+    await getLocalStationNum(),
+  );
+  if (typeof localStation === 'undefined') {
+    throw new Error(
+      'You must specify an econet station number for this machine using the --station option (or store a default value using the set-station command)',
+    );
+  }
+  if (typeof serverStation === 'undefined') {
+    throw new Error('You must specify a fileserver number');
+  }
+  return { deviceName, serverStation, localStation };
 };
 
 void main();

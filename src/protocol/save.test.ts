@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { driver } from '@jprayner/piconet-nodejs';
-import { waitForReceiveTxEvent, waitForDataOrStatus, fsControlByte, stripCRs } from '../common';
+import {
+  waitForReceiveTxEvent,
+  waitForDataOrStatus,
+  fsControlByte,
+  stripCRs,
+} from '../common';
 import { load } from './load';
 import { readDirAccessObjectInfo } from './objectInfo';
 
@@ -32,23 +37,19 @@ describe('save protocol handler', () => {
     setupWaitForReceiveTxEventMock();
 
     const fileData = Buffer.from('ABC');
-    waitForDataOrStatusMock.mockResolvedValueOnce(
-      {
-        type: 'data',
-        data: fileData,
-      },
-    );
+    waitForDataOrStatusMock.mockResolvedValueOnce({
+      type: 'data',
+      data: fileData,
+    });
 
-    waitForDataOrStatusMock.mockResolvedValueOnce(
-      {
-        type: 'status',
-        controlByte: fsControlByte,
-        port: statusPort,
-        commandCode,
-        resultCode: 0,
-        data: Buffer.from([]),
-      },
-    );
+    waitForDataOrStatusMock.mockResolvedValueOnce({
+      type: 'status',
+      controlByte: fsControlByte,
+      port: statusPort,
+      commandCode,
+      resultCode: 0,
+      data: Buffer.from([]),
+    });
 
     const result = await load(254, 'FNAME');
     expect(result.actualFilename).toEqual('FNAME');
@@ -78,12 +79,12 @@ describe('save protocol handler', () => {
       },
     );
   };
-  
+
   const setupWaitForReceiveTxEventMock = () => {
     waitForReceiveTxEventMock.mockImplementation(
       async (station: number, controlByte: number, replyPorts: number[]) => {
         const header = Buffer.alloc(14);
-        header[0] = 0x80;  // data port
+        header[0] = 0x80; // data port
         header[1] = header.writeInt16LE(0x0b, 1);
         // TODO: YOU ARE HERE
         header.writeUInt32LE(loadAddr, 0);
@@ -93,10 +94,7 @@ describe('save protocol handler', () => {
         header[11] = access;
         header.writeUInt16LE(date, 12);
         const dirName12Chars = Buffer.from('FNAME       ');
-        const trailer = Buffer.from([
-          0xff,
-          0x4c,
-        ]);
+        const trailer = Buffer.from([0xff, 0x4c]);
         return Promise.resolve({
           controlByte,
           port: dataPort,

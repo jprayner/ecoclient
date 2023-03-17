@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { driver } from '@jprayner/piconet-nodejs';
-import { waitForReceiveTxEvent, waitForDataOrStatus, fsControlByte, stripCRs } from '../common';
+import {
+  waitForReceiveTxEvent,
+  waitForDataOrStatus,
+  fsControlByte,
+  stripCRs,
+} from '../common';
 import { load } from './load';
 import { readDirAccessObjectInfo } from './objectInfo';
 
@@ -32,23 +37,19 @@ describe('load protocol handler', () => {
     setupWaitForReceiveTxEventMock();
 
     const fileData = Buffer.from('ABC');
-    waitForDataOrStatusMock.mockResolvedValueOnce(
-      {
-        type: 'data',
-        data: fileData,
-      },
-    );
+    waitForDataOrStatusMock.mockResolvedValueOnce({
+      type: 'data',
+      data: fileData,
+    });
 
-    waitForDataOrStatusMock.mockResolvedValueOnce(
-      {
-        type: 'status',
-        controlByte: fsControlByte,
-        port: statusPort,
-        commandCode,
-        resultCode: 0,
-        data: Buffer.from([]),
-      },
-    );
+    waitForDataOrStatusMock.mockResolvedValueOnce({
+      type: 'status',
+      controlByte: fsControlByte,
+      port: statusPort,
+      commandCode,
+      resultCode: 0,
+      data: Buffer.from([]),
+    });
 
     const result = await load(254, 'FNAME');
     expect(result.actualFilename).toEqual('FNAME');
@@ -79,8 +80,10 @@ describe('load protocol handler', () => {
         });
       },
     );
-  
-    await expect(load(254, 'FNAME')).rejects.toThrowError('Failed to send LOAD command to station 254');
+
+    await expect(load(254, 'FNAME')).rejects.toThrowError(
+      'Failed to send LOAD command to station 254',
+    );
   });
 
   it('should handle truncated server response correctly', async () => {
@@ -98,16 +101,17 @@ describe('load protocol handler', () => {
         });
       },
     );
-  
-  
-    await expect(load(254, 'FNAME')).rejects.toThrowError('Malformed response in LOAD from station 254: success but not enough data');
+
+    await expect(load(254, 'FNAME')).rejects.toThrowError(
+      'Malformed response in LOAD from station 254: success but not enough data',
+    );
   });
 
   it('should report load file error correctly', async () => {
     stripCRsMock.mockImplementation((str: string) => str.replace(/\r/g, ''));
 
     setupTransmitMock();
-    
+
     waitForReceiveTxEventMock.mockImplementation(
       async (station: number, controlByte: number, replyPorts: number[]) => {
         return Promise.resolve({
@@ -120,7 +124,9 @@ describe('load protocol handler', () => {
       },
     );
 
-    await expect(load(254, 'FNAME')).rejects.toThrowError('Something bad happened');
+    await expect(load(254, 'FNAME')).rejects.toThrowError(
+      'Something bad happened',
+    );
   });
 
   it('should load report mid-transfer file load error correctly', async () => {
@@ -129,18 +135,18 @@ describe('load protocol handler', () => {
     setupTransmitMock();
     setupWaitForReceiveTxEventMock();
 
-    waitForDataOrStatusMock.mockResolvedValueOnce(
-      {
-        type: 'status',
-        controlByte: fsControlByte,
-        port: statusPort,
-        commandCode,
-        resultCode: 1,
-        data: Buffer.from('Oh dear, oh dear\r'),
-      },
-    );
+    waitForDataOrStatusMock.mockResolvedValueOnce({
+      type: 'status',
+      controlByte: fsControlByte,
+      port: statusPort,
+      commandCode,
+      resultCode: 1,
+      data: Buffer.from('Oh dear, oh dear\r'),
+    });
 
-    await expect(load(254, 'FNAME')).rejects.toThrowError('Load failed during delivery: Oh dear, oh dear');
+    await expect(load(254, 'FNAME')).rejects.toThrowError(
+      'Load failed during delivery: Oh dear, oh dear',
+    );
   });
 });
 
@@ -173,10 +179,7 @@ const setupWaitForReceiveTxEventMock = () => {
       header[11] = access;
       header.writeUInt16LE(date, 12);
       const dirName12Chars = Buffer.from('FNAME       ');
-      const trailer = Buffer.from([
-        0xff,
-        0x4c,
-      ]);
+      const trailer = Buffer.from([0xff, 0x4c]);
       return Promise.resolve({
         controlByte,
         port: dataPort,
