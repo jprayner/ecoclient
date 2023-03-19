@@ -43,9 +43,9 @@ export const readDirAccessObjectInfo = async (
     msg,
   );
 
-  if (txResult.result !== 'OK') {
+  if (!txResult.success) {
     throw new Error(
-      `Failed to send object info command (0x12) to station ${serverStation}: ${txResult.result}`,
+      `Failed to send object info command (0x12) to station ${serverStation}: ${txResult.description}`,
     );
   }
 

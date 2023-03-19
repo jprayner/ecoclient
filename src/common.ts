@@ -1,5 +1,4 @@
-import { hexdump } from '@gct256/hexdump';
-import { driver, EconetEvent } from '@jprayner/piconet-nodejs';
+import { driver, EconetEvent, ErrorEvent, RxTransmitEvent } from '@jprayner/piconet-nodejs';
 
 export const fsControlByte = 0x80;
 export const fsPort = 0x99;
@@ -12,7 +11,6 @@ export const directoryHandles = {
 };
 
 export const stripCRs = (str: string) => str.replace(/\r/g, '');
-export const bufferToHexDump = (buffer: Buffer) => hexdump(buffer).join('\n');
 
 export const standardTxMessage = (
   serverPort: number,
@@ -40,7 +38,7 @@ export const responseMatcher = (
 ) => {
   return (event: EconetEvent) => {
     const result =
-      event.type === 'RxTransmitEvent' &&
+      event instanceof RxTransmitEvent &&
       event.scoutFrame.length >= 6 &&
       event.scoutFrame[2] === sourceStation &&
       event.scoutFrame[3] === sourceNetwork &&
@@ -57,7 +55,7 @@ export const initConnection = async (
   await driver.connect(device);
 
   driver.addListener(event => {
-    if (event.type === 'ErrorEvent') {
+    if (event instanceof ErrorEvent) {
       console.error(`ERROR: ${event.description}`);
     }
   });
@@ -69,7 +67,7 @@ export const initConnection = async (
 export const waitForAckEvent = async (serverStation: number, port: number) => {
   return driver.waitForEvent((event: EconetEvent) => {
     const result =
-      event.type === 'RxTransmitEvent' &&
+      event instanceof RxTransmitEvent &&
       event.scoutFrame.length >= 6 &&
       event.scoutFrame[2] === serverStation &&
       event.scoutFrame[3] === 0 &&
@@ -87,7 +85,7 @@ export const waitForReceiveTxEvent = async (
     responseMatcher(serverStation, 0, controlByte, ports),
     2000,
   );
-  if (rxTransmitEvent.type !== 'RxTransmitEvent') {
+  if (!(rxTransmitEvent instanceof RxTransmitEvent)) {
     throw new Error(`Unexpected response from station ${serverStation}`);
   }
   if (rxTransmitEvent.dataFrame.length < 6) {
@@ -112,7 +110,7 @@ export const waitForDataOrStatus = async (
     responseMatcher(serverStation, 0, controlByte, [dataPort, statusPort]),
     2000,
   );
-  if (rxTransmitEvent.type !== 'RxTransmitEvent') {
+  if (!(rxTransmitEvent instanceof RxTransmitEvent)) {
     throw new Error(`Unexpected response from station ${serverStation}`);
   }
   if (rxTransmitEvent.scoutFrame[5] === statusPort) {
@@ -163,9 +161,9 @@ export const executeCliCommand = async (
     msg,
   );
 
-  if (txResult.result !== 'OK') {
+  if (!txResult.success) {
     throw new Error(
-      `Failed to send command to station ${serverStation}: ${txResult.result}`,
+      `Failed to send command to station ${serverStation}: ${txResult.description}`,
     );
   }
 

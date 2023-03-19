@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { driver } from '@jprayner/piconet-nodejs';
+import { driver, TxResultEvent } from '@jprayner/piconet-nodejs';
 import {
   waitForReceiveTxEvent,
   waitForDataOrStatus,
@@ -7,12 +7,9 @@ import {
   stripCRs,
 } from '../common';
 import { load } from './load';
-import { readDirAccessObjectInfo } from './objectInfo';
 
-jest.mock('@jprayner/piconet-nodejs');
 jest.mock('../common');
 
-const driverMock = jest.mocked(driver);
 const waitForReceiveTxEventMock = jest.mocked(waitForReceiveTxEvent);
 const waitForDataOrStatusMock = jest.mocked(waitForDataOrStatus);
 const stripCRsMock = jest.mocked(stripCRs);
@@ -65,7 +62,7 @@ describe('load protocol handler', () => {
   it('should handle no server response correctly', async () => {
     stripCRsMock.mockImplementation((str: string) => str.replace(/\r/g, ''));
 
-    driverMock.transmit.mockImplementation(
+    jest.spyOn(driver, 'transmit').mockImplementation(
       async (
         station: number,
         network: number,
@@ -74,10 +71,7 @@ describe('load protocol handler', () => {
         data: Buffer,
         extraScoutData?: Buffer,
       ) => {
-        return Promise.resolve({
-          type: 'TxResultEvent',
-          result: 'OOPS',
-        });
+        return Promise.resolve(new TxResultEvent(false, 'OOPS'));
       },
     );
 
@@ -151,7 +145,7 @@ describe('load protocol handler', () => {
 });
 
 const setupTransmitMock = () => {
-  driverMock.transmit.mockImplementation(
+  return jest.spyOn(driver, 'transmit').mockImplementation(
     async (
       station: number,
       network: number,
@@ -160,10 +154,7 @@ const setupTransmitMock = () => {
       data: Buffer,
       extraScoutData?: Buffer,
     ) => {
-      return Promise.resolve({
-        type: 'TxResultEvent',
-        result: 'OK',
-      });
+      return Promise.resolve(new TxResultEvent(true, 'OK'));
     },
   );
 };

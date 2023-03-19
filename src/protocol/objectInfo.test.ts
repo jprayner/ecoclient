@@ -1,12 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { driver } from '@jprayner/piconet-nodejs';
+import { driver, TxResultEvent } from '@jprayner/piconet-nodejs';
 import { waitForReceiveTxEvent } from '../common';
 import { readDirAccessObjectInfo } from './objectInfo';
 
-jest.mock('@jprayner/piconet-nodejs');
 jest.mock('../common');
 
-const driverMock = jest.mocked(driver);
 const waitForReceiveTxEventMock = jest.mocked(waitForReceiveTxEvent);
 
 describe('objectInfo protocol handler', () => {
@@ -15,7 +13,7 @@ describe('objectInfo protocol handler', () => {
   });
 
   it('should read directory object info successfully', async () => {
-    driverMock.transmit.mockImplementation(
+    jest.spyOn(driver, 'transmit').mockImplementation(
       async (
         station: number,
         network: number,
@@ -24,10 +22,7 @@ describe('objectInfo protocol handler', () => {
         data: Buffer,
         extraScoutData?: Buffer,
       ) => {
-        return Promise.resolve({
-          type: 'TxResultEvent',
-          result: 'OK',
-        });
+        return Promise.resolve(new TxResultEvent(true, 'OK'));
       },
     );
 
@@ -58,7 +53,7 @@ describe('objectInfo protocol handler', () => {
   });
 
   it('should throw error if server fails to respond to read directory object info', async () => {
-    driverMock.transmit.mockImplementation(
+    jest.spyOn(driver, 'transmit').mockImplementation(
       async (
         station: number,
         network: number,
@@ -67,10 +62,7 @@ describe('objectInfo protocol handler', () => {
         data: Buffer,
         extraScoutData?: Buffer,
       ) => {
-        return Promise.resolve({
-          type: 'TxResultEvent',
-          result: 'Something bad happened',
-        });
+        return Promise.resolve(new TxResultEvent(false, 'Something bad happened'));
       },
     );
 
@@ -80,7 +72,7 @@ describe('objectInfo protocol handler', () => {
   });
 
   it('should throw error if server returns malformed response from read directory object info', async () => {
-    driverMock.transmit.mockImplementation(
+    jest.spyOn(driver, 'transmit').mockImplementation(
       async (
         station: number,
         network: number,
@@ -89,10 +81,7 @@ describe('objectInfo protocol handler', () => {
         data: Buffer,
         extraScoutData?: Buffer,
       ) => {
-        return Promise.resolve({
-          type: 'TxResultEvent',
-          result: 'OK',
-        });
+        return Promise.resolve(new TxResultEvent(true, 'OK'));
       },
     );
 

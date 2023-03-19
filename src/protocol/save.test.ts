@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { driver } from '@jprayner/piconet-nodejs';
+import { driver, TxResultEvent } from '@jprayner/piconet-nodejs';
 import {
   waitForReceiveTxEvent,
   waitForDataOrStatus,
@@ -9,10 +9,8 @@ import {
 import { load } from './load';
 import { readDirAccessObjectInfo } from './objectInfo';
 
-jest.mock('@jprayner/piconet-nodejs');
 jest.mock('../common');
 
-const driverMock = jest.mocked(driver);
 const waitForReceiveTxEventMock = jest.mocked(waitForReceiveTxEvent);
 const waitForDataOrStatusMock = jest.mocked(waitForDataOrStatus);
 const stripCRsMock = jest.mocked(stripCRs);
@@ -63,7 +61,7 @@ describe('save protocol handler', () => {
   });
 
   const setupTransmitMock = () => {
-    driverMock.transmit.mockImplementation(
+    jest.spyOn(driver, 'transmit').mockImplementation(
       async (
         station: number,
         network: number,
@@ -72,10 +70,7 @@ describe('save protocol handler', () => {
         data: Buffer,
         extraScoutData?: Buffer,
       ) => {
-        return Promise.resolve({
-          type: 'TxResultEvent',
-          result: 'OK',
-        });
+        return Promise.resolve(new TxResultEvent(true, 'OK'));
       },
     );
   };

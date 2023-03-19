@@ -32,7 +32,7 @@ export const load = async (serverStation: number, filename: string) => {
     msg,
   );
 
-  if (txResult.result !== 'OK') {
+  if (!txResult.success) {
     throw new Error(`Failed to send LOAD command to station ${serverStation}`);
   }
 

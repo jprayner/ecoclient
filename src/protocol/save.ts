@@ -8,7 +8,7 @@ import {
   waitForAckEvent,
   waitForReceiveTxEvent,
 } from '../common';
-import { driver } from '@jprayner/piconet-nodejs';
+import { driver, RxTransmitEvent } from '@jprayner/piconet-nodejs';
 
 export const save = async (
   serverStation: number,
@@ -65,7 +65,7 @@ export const save = async (
     msg,
   );
 
-  if (txResult.result !== 'OK') {
+  if (!txResult.success) {
     throw new Error(`Failed to send SAVE command to station ${serverStation}`);
   }
 
@@ -103,7 +103,7 @@ export const save = async (
       dataToSend,
     );
 
-    if (dataTxResult.result !== 'OK') {
+    if (!dataTxResult.success) {
       throw new Error(`Failed to send SAVE data to station ${serverStation}`);
     }
 
@@ -132,7 +132,7 @@ const waitForSaveStatus = async (
     responseMatcher(serverStation, 0, controlByte, [statusPort]),
     2000,
   );
-  if (rxTransmitEvent.type !== 'RxTransmitEvent') {
+  if (!(rxTransmitEvent instanceof RxTransmitEvent)) {
     throw new Error(`Unexpected response from station ${serverStation}`);
   }
   if (rxTransmitEvent.dataFrame.length < 9) {

@@ -50,7 +50,7 @@ export const examineDir = async (serverStation: number, dirPath: string) => {
       msg,
     );
 
-    if (txResult.result !== 'OK') {
+    if (!txResult.success) {
       throw new Error(
         `Failed to send examine command to station ${serverStation}`,
       );
