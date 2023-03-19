@@ -20,6 +20,7 @@ import {
   setLocalStationNum,
   setServerStationNum,
 } from './config';
+import { spawn, spawnSync } from 'child_process';
 
 const commandIAm = async (
   username: string,
@@ -81,6 +82,43 @@ const commandGet = async (filename: string, options: object) => {
   await initConnection(deviceName, localStation);
   const result = await load(serverStation, filename);
   fs.writeFileSync(result.actualFilename, result.data);
+  await driver.close();
+};
+
+const commandLoad = async (filename: string, options: object) => {
+  // TODO: do this stuff in wrapper
+  const { deviceName, serverStation, localStation } = await resolveOptions(
+    options,
+  );
+  await initConnection(deviceName, localStation);
+  const result = await load(serverStation, filename);
+  fs.writeFileSync(result.actualFilename, result.data);
+
+  try {
+    const spawnResult = spawnSync('basictool', [result.actualFilename]);
+    fs.writeFileSync(`${result.actualFilename}.bas`, spawnResult.stdout);
+  } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+    console.error(`Failed to launch basictool utility: ${e instanceof Error ? e.message : e} `);
+    // TODO: getting this if tool unavailble: Failed to launch basictool utility: The "data" argument must be of type string or an instance of Buffer, TypedArray, or DataView. Received null 
+  } finally {
+    // TODO: do this stuff in wrapper
+    await driver.close();
+  }
+};
+
+const commandSave = async (localPath: string, destPath: string, options: object) => {
+  const { deviceName, serverStation, localStation } = await resolveOptions(
+    options,
+  );
+  await initConnection(deviceName, localStation);
+
+  const spawnResult = spawnSync('basictool', ['-t', `${localPath}.bas`]);
+  console.log(`stdout: ${spawnResult.stdout.toString('hex')}`);
+  console.log(`destPath: ${destPath}`);
+  console.log(`serverStation: ${serverStation}`);
+  const fileTitle = `${path.basename(destPath)}\r`;
+  await save(serverStation, spawnResult.stdout, fileTitle, 0xffff0e00, 0xffff2b80);
   await driver.close();
 };
 
@@ -235,6 +273,49 @@ const main = () => {
       ).default(254),
     )
     .action(errorHnd(commandGet));
+
+  program
+    .command('load')
+    .description('load basic file and detokenise (needs basictool installed)')
+    .argument('<filename>', 'filename')
+    .addOption(
+      new Option('-dev, --device <string>', 'specify PICO serial device'),
+    )
+    .addOption(
+      new Option(
+        '-s, --station <number>',
+        'specify local Econet station number',
+      ),
+    )
+    .addOption(
+      new Option(
+        '-fs, --fileserver <number>',
+        'specify fileserver station number',
+      ).default(254),
+    )
+    .action(errorHnd(commandLoad));
+
+    program
+      .command('save')
+      .description('save basic file after detokenising (needs basictool installed)')
+      .argument('<localPath>', 'path to file on local filesystem')
+      .argument('<destPath>', 'path to file on fileserver')
+      .addOption(
+        new Option('-dev, --device <string>', 'specify PICO serial device'),
+      )
+      .addOption(
+        new Option(
+          '-s, --station <number>',
+          'specify local Econet station number',
+        ),
+      )
+      .addOption(
+        new Option(
+          '-fs, --fileserver <number>',
+          'specify fileserver station number',
+        ).default(254),
+      )  
+      .action(errorHnd(commandSave));
 
   program
     .command('put')
