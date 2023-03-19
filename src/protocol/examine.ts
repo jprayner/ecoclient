@@ -11,11 +11,21 @@ import {
 const timeoutMs = 2000;
 const hasTimedOut = (startTime: number) => Date.now() - startTime > timeoutMs;
 
+export type FileInfo = {
+  id: string;
+  name: string;
+  loadAddress: string;
+  execAddress: string;
+  sizeBytes: number;
+  date: string;
+  access: string;
+};
+
 export const examineDir = async (serverStation: number, dirPath: string) => {
   const replyPort = 0x90;
   const functionCode = 0x03;
 
-  let results: string[] = [];
+  let results: FileInfo[] = [];
   let startIndex = 0;
   const startTime = Date.now();
   while (!hasTimedOut(startTime)) {
@@ -83,7 +93,20 @@ export const examineDir = async (serverStation: number, dirPath: string) => {
       .split('\0')
       .filter(
         f => f.length != 0 && !(f.length === 1 && f.charCodeAt(0) === 0x80),
-      );
+      )
+      .map(f => {
+        const [name, loadAddress, execAddress, sizeBytes, access, date, id] =
+          f.split(/\s+/);
+        return {
+          id,
+          name,
+          loadAddress,
+          execAddress,
+          sizeBytes: parseInt(sizeBytes, 16),
+          date,
+          access,
+        };
+      });
     results = results.concat(filesWithAccess);
     startIndex += numEntriesReturned;
   }

@@ -1,8 +1,9 @@
 #! /usr/bin/env node
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { driver } from '@jprayner/piconet-nodejs';
+import { driver, ErrorEvent, RxDataEvent } from '@jprayner/piconet-nodejs';
 import { Command, Option } from 'commander';
 import { initConnection } from './common';
 import { load } from './protocol/load';
@@ -11,6 +12,7 @@ import { readDirAccessObjectInfo } from './protocol/objectInfo';
 import { iAm } from './protocol/iAm';
 import { examineDir } from './protocol/examine';
 import { access, bye, cdir, deleteFile } from './protocol/simpleCli';
+import { notify } from './protocol/notify';
 import { PKG_VERSION } from './version';
 import {
   getLocalStationNum,
@@ -98,10 +100,23 @@ const commandCat = async (dirPath: string, options: object) => {
     options,
   );
   await initConnection(deviceName, localStation);
-  const result = await examineDir(serverStation, dirPath);
-  console.log(JSON.stringify(result, null, 4));
-  const result2 = await readDirAccessObjectInfo(serverStation, dirPath);
-  console.log(JSON.stringify(result2, null, 4));
+  const dirInfo = await readDirAccessObjectInfo(serverStation, dirPath);
+  const files = await examineDir(serverStation, dirPath);
+
+  console.log(
+    `[${dirInfo.dirName} (${dirInfo.cycleNum}) - ${
+      dirInfo.isOwner ? 'Owner' : 'Public'
+    }]`,
+  );
+  for (const f of files) {
+    console.log(
+      `${f.name.padEnd(10)} ${f.loadAddress.padEnd(8)} ${f.execAddress.padEnd(
+        8,
+      )}  ${f.sizeBytes.toString(10).padStart(8)} ${f.access.padEnd(10)} ${
+        f.date
+      } ${f.id}`,
+    );
+  }
   await driver.close();
 };
 
@@ -111,6 +126,43 @@ const commandSetStation = async (station: string) => {
 
 const commandSetFileserver = async (station: string) => {
   await setServerStationNum(parseInt(station));
+};
+
+const commandNotify = async (
+  station: string,
+  message: string,
+  options: object,
+) => {
+  const { deviceName, localStation } = await resolveOptions(options);
+  await initConnection(deviceName, localStation);
+  await notify(parseInt(station), message);
+  await driver.close();
+};
+
+const commandMonitor = async (options: object) => {
+  const { deviceName, localStation } = await resolveOptions(options);
+  await initConnection(deviceName, localStation);
+  driver.addListener(event => {
+    if (event instanceof ErrorEvent) {
+      console.error(`ERROR: ${event.description}`);
+      return;
+    } else if (event instanceof RxDataEvent) {
+      console.log(event.toString());
+    }
+  });
+
+  await driver.setMode('MONITOR');
+
+  process.on('SIGINT', () => {
+    driver
+      .close()
+      .then(() => {
+        process.exit();
+      })
+      .catch((err: Error) => {
+        console.error(err.toString());
+      });
+  });
 };
 
 const main = () => {
@@ -133,17 +185,15 @@ const main = () => {
       new Option(
         '-s, --station <number>',
         'specify local Econet station number',
-      ).env('ECONET_STATION'),
+      ),
     )
     .addOption(
       new Option(
         '-fs, --fileserver <number>',
         'specify fileserver station number',
-      )
-        .default(254)
-        .env('ECONET_FS_STATION'),
+      ).default(254),
     )
-    .action(commandIAm);
+    .action(errorHnd(commandIAm));
 
   program
     .command('bye')
@@ -155,19 +205,15 @@ const main = () => {
       new Option(
         '-s, --station <number>',
         'specify local Econet station number',
-      ).env('ECONET_STATION'),
+      ),
     )
     .addOption(
       new Option(
         '-fs, --fileserver <number>',
         'specify fileserver station number',
-      )
-        .default(254)
-        .env('ECONET_FS_STATION'),
+      ).default(254),
     )
-    .action(async () => {
-      await commandBye(program);
-    });
+    .action(errorHnd(commandBye));
 
   program
     .command('get')
@@ -180,17 +226,15 @@ const main = () => {
       new Option(
         '-s, --station <number>',
         'specify local Econet station number',
-      ).env('ECONET_STATION'),
+      ),
     )
     .addOption(
       new Option(
         '-fs, --fileserver <number>',
         'specify fileserver station number',
-      )
-        .default(254)
-        .env('ECONET_FS_STATION'),
+      ).default(254),
     )
-    .action(commandGet);
+    .action(errorHnd(commandGet));
 
   program
     .command('put')
@@ -203,17 +247,15 @@ const main = () => {
       new Option(
         '-s, --station <number>',
         'specify local Econet station number',
-      ).env('ECONET_STATION'),
+      ),
     )
     .addOption(
       new Option(
         '-fs, --fileserver <number>',
         'specify fileserver station number',
-      )
-        .default(254)
-        .env('ECONET_FS_STATION'),
+      ).default(254),
     )
-    .action(commandPut);
+    .action(errorHnd(commandPut));
 
   program
     .command('cat')
@@ -226,17 +268,15 @@ const main = () => {
       new Option(
         '-s, --station <number>',
         'specify local Econet station number',
-      ).env('ECONET_STATION'),
+      ),
     )
     .addOption(
       new Option(
         '-fs, --fileserver <number>',
         'specify fileserver station number',
-      )
-        .default(1)
-        .env('ECONET_FS_STATION'),
+      ).default(1),
     )
-    .action(commandCat);
+    .action(errorHnd(commandCat));
 
   program
     .command('cdir')
@@ -249,17 +289,15 @@ const main = () => {
       new Option(
         '-s, --station <number>',
         'specify local Econet station number',
-      ).env('ECONET_STATION'),
+      ),
     )
     .addOption(
       new Option(
         '-fs, --fileserver <number>',
         'specify fileserver station number',
-      )
-        .default(254)
-        .env('ECONET_FS_STATION'),
+      ).default(254),
     )
-    .action(commandCdir);
+    .action(errorHnd(commandCdir));
 
   program
     .command('delete')
@@ -272,17 +310,15 @@ const main = () => {
       new Option(
         '-s, --station <number>',
         'specify local Econet station number',
-      ).env('ECONET_STATION'),
+      ),
     )
     .addOption(
       new Option(
         '-fs, --fileserver <number>',
         'specify fileserver station number',
-      )
-        .default(254)
-        .env('ECONET_FS_STATION'),
+      ).default(254),
     )
-    .action(commandDelete);
+    .action(errorHnd(commandDelete));
 
   program
     .command('access')
@@ -296,32 +332,62 @@ const main = () => {
       new Option(
         '-s, --station <number>',
         'specify local Econet station number',
-      ).env('ECONET_STATION'),
+      ),
     )
     .addOption(
       new Option(
         '-fs, --fileserver <number>',
         'specify fileserver station number',
-      )
-        .default(254)
-        .env('ECONET_FS_STATION'),
+      ).default(254),
     )
-    .action(commandAccess);
+    .action(errorHnd(commandAccess));
 
   program
     .command('set-fs')
     .description('set fileserver')
     .argument('<station>', 'station number')
-    .action(commandSetFileserver);
+    .action(errorHnd(commandSetFileserver));
 
   program
     .command('set-station')
     .description('set Econet station')
     .argument('<station>', 'station number')
-    .action(commandSetStation);
+    .action(errorHnd(commandSetStation));
+
+  program
+    .command('notify')
+    .description(
+      'send notification message to a station like a "*NOTIFY" command',
+    )
+    .argument('<station>', 'station number')
+    .argument('<message>', 'message')
+    .addOption(
+      new Option('-dev, --device <string>', 'specify PICO serial device'),
+    )
+    .action(errorHnd(commandNotify));
+
+  program
+    .command('monitor')
+    .description('listen for network traffic like a "*NETMON" command')
+    .addOption(
+      new Option('-dev, --device <string>', 'specify PICO serial device'),
+    )
+    .action(errorHnd(commandMonitor));
 
   program.parse(process.argv);
 };
+
+const errorHnd =
+  (fn: (...args: any[]) => Promise<void>) =>
+  async (...args: any[]) => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      await fn(...args);
+    } catch (e: unknown) {
+      console.error(e instanceof Error ? e.message : e);
+      process.exit(1);
+    }
+  };
 
 const stringOption = (options: object, key: string): string | undefined => {
   for (const [k, v] of Object.entries(options)) {
@@ -370,4 +436,4 @@ const resolveOptions = async (options: object) => {
   return { deviceName, serverStation, localStation };
 };
 
-void main();
+main();
