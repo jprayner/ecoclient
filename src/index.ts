@@ -21,6 +21,7 @@ import {
   setServerStationNum,
 } from './config';
 import { spawn, spawnSync } from 'child_process';
+import { dir } from './protocol/dir';
 
 const commandIAm = async (
   username: string,
@@ -32,6 +33,19 @@ const commandIAm = async (
   );
   await initConnection(deviceName, localStation);
   await iAm(serverStation, username, password);
+  await driver.close();
+};
+
+const commandDir = async (
+  dirPath: string,
+  options: object,
+) => {
+  const { deviceName, serverStation, localStation } = await resolveOptions(
+    options,
+  );
+  await initConnection(deviceName, localStation);
+  const dirInfo = await dir(serverStation, dirPath);
+  console.log(`New handle: ${dirInfo.handleCurrentDir}`);
   await driver.close();
 };
 
@@ -252,6 +266,27 @@ const main = () => {
       ).default(254),
     )
     .action(errorHnd(commandBye));
+
+  program
+    .command('dir')
+    .description('change current directory')
+    .argument('<dir>', 'directory path')
+    .addOption(
+      new Option('-dev, --device <string>', 'specify PICO serial device'),
+    )
+    .addOption(
+      new Option(
+        '-s, --station <number>',
+        'specify local Econet station number',
+      ),
+    )
+    .addOption(
+      new Option(
+        '-fs, --fileserver <number>',
+        'specify fileserver station number',
+      ).default(254),
+    )
+    .action(errorHnd(commandDir));
 
   program
     .command('get')
