@@ -62,9 +62,17 @@ describe('common.initConnection', () => {
   });
 
   it('should successfully initialise driver', async () => {
-    const connectSpy = jest.spyOn(driver, 'connect').mockImplementation(async (port: string | undefined) => Promise.resolve());
-    const setEconetStationSpy = jest.spyOn(driver, 'setEconetStation').mockImplementation(async (station: number) => Promise.resolve());
-    const setModeSpy = jest.spyOn(driver, 'setMode').mockImplementation(async (mode: string) => Promise.resolve());
+    const connectSpy = jest
+      .spyOn(driver, 'connect')
+      .mockImplementation(async (port: string | undefined) =>
+        Promise.resolve(),
+      );
+    const setEconetStationSpy = jest
+      .spyOn(driver, 'setEconetStation')
+      .mockImplementation(async (station: number) => Promise.resolve());
+    const setModeSpy = jest
+      .spyOn(driver, 'setMode')
+      .mockImplementation(async (mode: string) => Promise.resolve());
 
     await initConnection('/dev/abc', 2);
     expect(connectSpy).toHaveBeenCalledWith('/dev/abc');
@@ -81,23 +89,28 @@ describe('common.waitForDataOrStatus', () => {
   it('should wait for data event', async () => {
     const dataPort = 90;
     const statusPort = 91;
-    jest.spyOn(driver, 'waitForEvent').mockImplementation(
-      async (callback: (event: EconetEvent) => boolean, timeoutMs: number) => {
-        return Promise.resolve(
-          dummyReplyRxTransmitEvent({
-            fsStation: 254,
-            fsNet: 0,
-            localStation: 1,
-            localNet: 0,
-            controlByte: fsControlByte,
-            replyPort: dataPort,
-            commandCode: 0,
-            resultCode: 0,
-            data: Buffer.from([]),
-          }),
-        );
-      },
-    );
+    jest
+      .spyOn(driver, 'waitForEvent')
+      .mockImplementation(
+        async (
+          callback: (event: EconetEvent) => boolean,
+          timeoutMs: number,
+        ) => {
+          return Promise.resolve(
+            dummyReplyRxTransmitEvent({
+              fsStation: 254,
+              fsNet: 0,
+              localStation: 1,
+              localNet: 0,
+              controlByte: fsControlByte,
+              replyPort: dataPort,
+              commandCode: 0,
+              resultCode: 0,
+              data: Buffer.from([]),
+            }),
+          );
+        },
+      );
 
     const result = await waitForDataOrStatus(
       254,
@@ -111,23 +124,28 @@ describe('common.waitForDataOrStatus', () => {
   it('should reject truncated data event', async () => {
     const dataPort = 90;
     const statusPort = 91;
-    jest.spyOn(driver, 'waitForEvent').mockImplementation(
-      async (callback: (event: EconetEvent) => boolean, timeoutMs: number) => {
-        const replyEvent = dummyReplyRxTransmitEvent({
-          fsStation: 254,
-          fsNet: 0,
-          localStation: 1,
-          localNet: 0,
-          controlByte: fsControlByte,
-          replyPort: dataPort,
-          commandCode: 0,
-          resultCode: 0,
-          data: Buffer.from([]),
-        });
-        replyEvent.dataFrame = replyEvent.dataFrame.slice(0, 1);
-        return Promise.resolve(replyEvent);
-      },
-    );
+    jest
+      .spyOn(driver, 'waitForEvent')
+      .mockImplementation(
+        async (
+          callback: (event: EconetEvent) => boolean,
+          timeoutMs: number,
+        ) => {
+          const replyEvent = dummyReplyRxTransmitEvent({
+            fsStation: 254,
+            fsNet: 0,
+            localStation: 1,
+            localNet: 0,
+            controlByte: fsControlByte,
+            replyPort: dataPort,
+            commandCode: 0,
+            resultCode: 0,
+            data: Buffer.from([]),
+          });
+          replyEvent.dataFrame = replyEvent.dataFrame.slice(0, 1);
+          return Promise.resolve(replyEvent);
+        },
+      );
 
     await expect(
       waitForDataOrStatus(254, fsControlByte, dataPort, statusPort),
@@ -137,36 +155,14 @@ describe('common.waitForDataOrStatus', () => {
   it('should reject truncated status event', async () => {
     const dataPort = 90;
     const statusPort = 91;
-    jest.spyOn(driver, 'waitForEvent').mockImplementation(
-      async (callback: (event: EconetEvent) => boolean, timeoutMs: number) => {
-        const replyEvent = dummyReplyRxTransmitEvent({
-          fsStation: 254,
-          fsNet: 0,
-          localStation: 1,
-          localNet: 0,
-          controlByte: fsControlByte,
-          replyPort: statusPort,
-          commandCode: 0,
-          resultCode: 0,
-          data: Buffer.from([]),
-        });
-        replyEvent.dataFrame = replyEvent.dataFrame.slice(0, 1);
-        return Promise.resolve(replyEvent);
-      },
-    );
-
-    await expect(
-      waitForDataOrStatus(254, fsControlByte, dataPort, statusPort),
-    ).rejects.toThrowError('Malformed response from station 254');
-  });
-
-  it('should wait for status event', async () => {
-    const dataPort = 90;
-    const statusPort = 91;
-    jest.spyOn(driver, 'waitForEvent').mockImplementation(
-      async (callback: (event: EconetEvent) => boolean, timeoutMs: number) => {
-        return Promise.resolve(
-          dummyReplyRxTransmitEvent({
+    jest
+      .spyOn(driver, 'waitForEvent')
+      .mockImplementation(
+        async (
+          callback: (event: EconetEvent) => boolean,
+          timeoutMs: number,
+        ) => {
+          const replyEvent = dummyReplyRxTransmitEvent({
             fsStation: 254,
             fsNet: 0,
             localStation: 1,
@@ -176,10 +172,42 @@ describe('common.waitForDataOrStatus', () => {
             commandCode: 0,
             resultCode: 0,
             data: Buffer.from([]),
-          }),
-        );
-      },
-    );
+          });
+          replyEvent.dataFrame = replyEvent.dataFrame.slice(0, 1);
+          return Promise.resolve(replyEvent);
+        },
+      );
+
+    await expect(
+      waitForDataOrStatus(254, fsControlByte, dataPort, statusPort),
+    ).rejects.toThrowError('Malformed response from station 254');
+  });
+
+  it('should wait for status event', async () => {
+    const dataPort = 90;
+    const statusPort = 91;
+    jest
+      .spyOn(driver, 'waitForEvent')
+      .mockImplementation(
+        async (
+          callback: (event: EconetEvent) => boolean,
+          timeoutMs: number,
+        ) => {
+          return Promise.resolve(
+            dummyReplyRxTransmitEvent({
+              fsStation: 254,
+              fsNet: 0,
+              localStation: 1,
+              localNet: 0,
+              controlByte: fsControlByte,
+              replyPort: statusPort,
+              commandCode: 0,
+              resultCode: 0,
+              data: Buffer.from([]),
+            }),
+          );
+        },
+      );
 
     const result = await waitForDataOrStatus(
       254,
@@ -193,11 +221,16 @@ describe('common.waitForDataOrStatus', () => {
   it('should reject unexpected event type', async () => {
     const dataPort = 90;
     const statusPort = 91;
-    jest.spyOn(driver, 'waitForEvent').mockImplementation(
-      async (callback: (event: EconetEvent) => boolean, timeoutMs: number) => {
-        return Promise.resolve(dummyReplyRxImmediateEvent());
-      },
-    );
+    jest
+      .spyOn(driver, 'waitForEvent')
+      .mockImplementation(
+        async (
+          callback: (event: EconetEvent) => boolean,
+          timeoutMs: number,
+        ) => {
+          return Promise.resolve(dummyReplyRxImmediateEvent());
+        },
+      );
 
     await expect(
       waitForDataOrStatus(254, fsControlByte, dataPort, statusPort),
@@ -211,35 +244,42 @@ describe('common.executeCliCommand', () => {
   });
 
   it('should execute a command successfully', async () => {
-    const transmitSpy = jest.spyOn(driver, 'transmit').mockImplementation(
-      async (
-        station: number,
-        network: number,
-        controlByte: number,
-        port: number,
-        data: Buffer,
-        extraScoutData?: Buffer,
-      ) => {
-        return Promise.resolve(new TxResultEvent(true, 'OK'));
-      },
-    );
-    const waitForEventSpy = jest.spyOn(driver, 'waitForEvent').mockImplementation(
-      async (callback: (event: EconetEvent) => boolean, timeoutMs: number) => {
-        return Promise.resolve(
-          dummyReplyRxTransmitEvent({
-            fsStation: 254,
-            fsNet: 0,
-            localStation: 1,
-            localNet: 0,
-            controlByte: fsControlByte,
-            replyPort: fsPort,
-            commandCode: 0,
-            resultCode: 0,
-            data: Buffer.from([]),
-          }),
-        );
-      },
-    );
+    const transmitSpy = jest
+      .spyOn(driver, 'transmit')
+      .mockImplementation(
+        async (
+          station: number,
+          network: number,
+          controlByte: number,
+          port: number,
+          data: Buffer,
+          extraScoutData?: Buffer,
+        ) => {
+          return Promise.resolve(new TxResultEvent(true, 'OK'));
+        },
+      );
+    const waitForEventSpy = jest
+      .spyOn(driver, 'waitForEvent')
+      .mockImplementation(
+        async (
+          callback: (event: EconetEvent) => boolean,
+          timeoutMs: number,
+        ) => {
+          return Promise.resolve(
+            dummyReplyRxTransmitEvent({
+              fsStation: 254,
+              fsNet: 0,
+              localStation: 1,
+              localNet: 0,
+              controlByte: fsControlByte,
+              replyPort: fsPort,
+              commandCode: 0,
+              resultCode: 0,
+              data: Buffer.from([]),
+            }),
+          );
+        },
+      );
     const resultPromise = executeCliCommand(254, 'BYE');
     const result = await resultPromise;
 
@@ -249,18 +289,22 @@ describe('common.executeCliCommand', () => {
   });
 
   it('should throw error when no response received from server', async () => {
-    const transmitSpy = jest.spyOn(driver, 'transmit').mockImplementation(
-      async (
-        station: number,
-        network: number,
-        controlByte: number,
-        port: number,
-        data: Buffer,
-        extraScoutData?: Buffer,
-      ) => {
-        return Promise.resolve(new TxResultEvent(false, 'invalid station number'));
-      },
-    );
+    const transmitSpy = jest
+      .spyOn(driver, 'transmit')
+      .mockImplementation(
+        async (
+          station: number,
+          network: number,
+          controlByte: number,
+          port: number,
+          data: Buffer,
+          extraScoutData?: Buffer,
+        ) => {
+          return Promise.resolve(
+            new TxResultEvent(false, 'invalid station number'),
+          );
+        },
+      );
     const waitForEventSpy = jest.spyOn(driver, 'waitForEvent');
     await expect(executeCliCommand(254, 'BYE')).rejects.toThrowError(
       'Failed to send command to station 254: invalid station number',
@@ -270,35 +314,42 @@ describe('common.executeCliCommand', () => {
   });
 
   it('should feed back error message when server rejects command', async () => {
-    const transmitSpy = jest.spyOn(driver, 'transmit').mockImplementation(
-      async (
-        station: number,
-        network: number,
-        controlByte: number,
-        port: number,
-        data: Buffer,
-        extraScoutData?: Buffer,
-      ) => {
-        return Promise.resolve(new TxResultEvent(true, 'OK'));
-      },
-    );
-    const waitForEventSpy = jest.spyOn(driver, 'waitForEvent').mockImplementation(
-      async (callback: (event: EconetEvent) => boolean, timeoutMs: number) => {
-        return Promise.resolve(
-          dummyReplyRxTransmitEvent({
-            fsStation: 254,
-            fsNet: 0,
-            localStation: 1,
-            localNet: 0,
-            controlByte: fsControlByte,
-            replyPort: fsPort,
-            commandCode: 0,
-            resultCode: 1,
-            data: Buffer.from('Bad things are occuring'),
-          }),
-        );
-      },
-    );
+    const transmitSpy = jest
+      .spyOn(driver, 'transmit')
+      .mockImplementation(
+        async (
+          station: number,
+          network: number,
+          controlByte: number,
+          port: number,
+          data: Buffer,
+          extraScoutData?: Buffer,
+        ) => {
+          return Promise.resolve(new TxResultEvent(true, 'OK'));
+        },
+      );
+    const waitForEventSpy = jest
+      .spyOn(driver, 'waitForEvent')
+      .mockImplementation(
+        async (
+          callback: (event: EconetEvent) => boolean,
+          timeoutMs: number,
+        ) => {
+          return Promise.resolve(
+            dummyReplyRxTransmitEvent({
+              fsStation: 254,
+              fsNet: 0,
+              localStation: 1,
+              localNet: 0,
+              controlByte: fsControlByte,
+              replyPort: fsPort,
+              commandCode: 0,
+              resultCode: 1,
+              data: Buffer.from('Bad things are occuring'),
+            }),
+          );
+        },
+      );
     await expect(executeCliCommand(254, 'BYE')).rejects.toThrowError(
       'Bad things are occuring',
     );
@@ -310,19 +361,23 @@ describe('common.executeCliCommand', () => {
 describe('common.responseMatcher', () => {
   it('should successfully match an appropriate response from Piconet', () => {
     const matcher = responseMatcher(254, 0, fsControlByte, [fsPort]);
-    const result = matcher(new RxTransmitEvent(
-      Buffer.from([1, 0, 254, 0, fsControlByte, fsPort]),
-      Buffer.from([]),
-    ));
+    const result = matcher(
+      new RxTransmitEvent(
+        Buffer.from([1, 0, 254, 0, fsControlByte, fsPort]),
+        Buffer.from([]),
+      ),
+    );
     expect(result).toBe(true);
   });
 
   it('should not match a undesired response from Piconet', () => {
     const matcher = responseMatcher(253, 0, fsControlByte, [fsPort]);
-    const result = matcher(new RxTransmitEvent(
-      Buffer.from([1, 0, 254, 0, fsControlByte, fsPort]),
-      Buffer.from([]),
-    ));
+    const result = matcher(
+      new RxTransmitEvent(
+        Buffer.from([1, 0, 254, 0, fsControlByte, fsPort]),
+        Buffer.from([]),
+      ),
+    );
     expect(result).toBe(false);
   });
 });
@@ -337,8 +392,16 @@ describe('common.waitForAckEvent', () => {
       Buffer.from([1, 0, 254, 0, 0, 0, 90]),
       Buffer.from([]),
     );
-    const waitForEventSpy = jest.spyOn(driver, 'waitForEvent').mockImplementation(
-      async (callback: (event: EconetEvent) => boolean, timeoutMs: number) => { return Promise.resolve(ackEvent); });
+    const waitForEventSpy = jest
+      .spyOn(driver, 'waitForEvent')
+      .mockImplementation(
+        async (
+          callback: (event: EconetEvent) => boolean,
+          timeoutMs: number,
+        ) => {
+          return Promise.resolve(ackEvent);
+        },
+      );
     await waitForAckEvent(254, 90);
     const matcher = waitForEventSpy.mock.calls[0][0];
     expect(matcher(ackEvent)).toBe(true);
@@ -349,8 +412,16 @@ describe('common.waitForAckEvent', () => {
       Buffer.from([1, 0, 254, 0, 0, 0, 90]),
       Buffer.from([]),
     );
-    const waitForEventSpy = jest.spyOn(driver, 'waitForEvent').mockImplementation(
-      async (callback: (event: EconetEvent) => boolean, timeoutMs: number) => { return Promise.resolve(nonAckEvent); });
+    const waitForEventSpy = jest
+      .spyOn(driver, 'waitForEvent')
+      .mockImplementation(
+        async (
+          callback: (event: EconetEvent) => boolean,
+          timeoutMs: number,
+        ) => {
+          return Promise.resolve(nonAckEvent);
+        },
+      );
     await waitForAckEvent(254, 90);
     const matcher = waitForEventSpy.mock.calls[0][0];
     expect(matcher(nonAckEvent)).toBe(false);

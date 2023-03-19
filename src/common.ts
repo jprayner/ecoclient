@@ -1,4 +1,9 @@
-import { driver, EconetEvent, ErrorEvent, RxTransmitEvent } from '@jprayner/piconet-nodejs';
+import {
+  driver,
+  EconetEvent,
+  ErrorEvent,
+  RxTransmitEvent,
+} from '@jprayner/piconet-nodejs';
 
 export const fsControlByte = 0x80;
 export const fsPort = 0x99;

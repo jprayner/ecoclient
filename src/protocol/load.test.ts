@@ -62,18 +62,20 @@ describe('load protocol handler', () => {
   it('should handle no server response correctly', async () => {
     stripCRsMock.mockImplementation((str: string) => str.replace(/\r/g, ''));
 
-    jest.spyOn(driver, 'transmit').mockImplementation(
-      async (
-        station: number,
-        network: number,
-        controlByte: number,
-        port: number,
-        data: Buffer,
-        extraScoutData?: Buffer,
-      ) => {
-        return Promise.resolve(new TxResultEvent(false, 'OOPS'));
-      },
-    );
+    jest
+      .spyOn(driver, 'transmit')
+      .mockImplementation(
+        async (
+          station: number,
+          network: number,
+          controlByte: number,
+          port: number,
+          data: Buffer,
+          extraScoutData?: Buffer,
+        ) => {
+          return Promise.resolve(new TxResultEvent(false, 'OOPS'));
+        },
+      );
 
     await expect(load(254, 'FNAME')).rejects.toThrowError(
       'Failed to send LOAD command to station 254',
@@ -145,18 +147,20 @@ describe('load protocol handler', () => {
 });
 
 const setupTransmitMock = () => {
-  return jest.spyOn(driver, 'transmit').mockImplementation(
-    async (
-      station: number,
-      network: number,
-      controlByte: number,
-      port: number,
-      data: Buffer,
-      extraScoutData?: Buffer,
-    ) => {
-      return Promise.resolve(new TxResultEvent(true, 'OK'));
-    },
-  );
+  return jest
+    .spyOn(driver, 'transmit')
+    .mockImplementation(
+      async (
+        station: number,
+        network: number,
+        controlByte: number,
+        port: number,
+        data: Buffer,
+        extraScoutData?: Buffer,
+      ) => {
+        return Promise.resolve(new TxResultEvent(true, 'OK'));
+      },
+    );
 };
 
 const setupWaitForReceiveTxEventMock = () => {

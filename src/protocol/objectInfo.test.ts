@@ -13,18 +13,20 @@ describe('objectInfo protocol handler', () => {
   });
 
   it('should read directory object info successfully', async () => {
-    jest.spyOn(driver, 'transmit').mockImplementation(
-      async (
-        station: number,
-        network: number,
-        controlByte: number,
-        port: number,
-        data: Buffer,
-        extraScoutData?: Buffer,
-      ) => {
-        return Promise.resolve(new TxResultEvent(true, 'OK'));
-      },
-    );
+    jest
+      .spyOn(driver, 'transmit')
+      .mockImplementation(
+        async (
+          station: number,
+          network: number,
+          controlByte: number,
+          port: number,
+          data: Buffer,
+          extraScoutData?: Buffer,
+        ) => {
+          return Promise.resolve(new TxResultEvent(true, 'OK'));
+        },
+      );
 
     waitForReceiveTxEventMock.mockImplementation(
       async (station: number, controlByte: number, replyPorts: number[]) => {
@@ -53,18 +55,22 @@ describe('objectInfo protocol handler', () => {
   });
 
   it('should throw error if server fails to respond to read directory object info', async () => {
-    jest.spyOn(driver, 'transmit').mockImplementation(
-      async (
-        station: number,
-        network: number,
-        controlByte: number,
-        port: number,
-        data: Buffer,
-        extraScoutData?: Buffer,
-      ) => {
-        return Promise.resolve(new TxResultEvent(false, 'Something bad happened'));
-      },
-    );
+    jest
+      .spyOn(driver, 'transmit')
+      .mockImplementation(
+        async (
+          station: number,
+          network: number,
+          controlByte: number,
+          port: number,
+          data: Buffer,
+          extraScoutData?: Buffer,
+        ) => {
+          return Promise.resolve(
+            new TxResultEvent(false, 'Something bad happened'),
+          );
+        },
+      );
 
     await expect(readDirAccessObjectInfo(254, '$')).rejects.toThrowError(
       'Failed to send object info command (0x12) to station 254: Something bad happened',
@@ -72,18 +78,20 @@ describe('objectInfo protocol handler', () => {
   });
 
   it('should throw error if server returns malformed response from read directory object info', async () => {
-    jest.spyOn(driver, 'transmit').mockImplementation(
-      async (
-        station: number,
-        network: number,
-        controlByte: number,
-        port: number,
-        data: Buffer,
-        extraScoutData?: Buffer,
-      ) => {
-        return Promise.resolve(new TxResultEvent(true, 'OK'));
-      },
-    );
+    jest
+      .spyOn(driver, 'transmit')
+      .mockImplementation(
+        async (
+          station: number,
+          network: number,
+          controlByte: number,
+          port: number,
+          data: Buffer,
+          extraScoutData?: Buffer,
+        ) => {
+          return Promise.resolve(new TxResultEvent(true, 'OK'));
+        },
+      );
 
     waitForReceiveTxEventMock.mockImplementation(
       async (station: number, controlByte: number, replyPorts: number[]) => {

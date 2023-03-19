@@ -61,18 +61,20 @@ describe('save protocol handler', () => {
   });
 
   const setupTransmitMock = () => {
-    jest.spyOn(driver, 'transmit').mockImplementation(
-      async (
-        station: number,
-        network: number,
-        controlByte: number,
-        port: number,
-        data: Buffer,
-        extraScoutData?: Buffer,
-      ) => {
-        return Promise.resolve(new TxResultEvent(true, 'OK'));
-      },
-    );
+    jest
+      .spyOn(driver, 'transmit')
+      .mockImplementation(
+        async (
+          station: number,
+          network: number,
+          controlByte: number,
+          port: number,
+          data: Buffer,
+          extraScoutData?: Buffer,
+        ) => {
+          return Promise.resolve(new TxResultEvent(true, 'OK'));
+        },
+      );
   };
 
   const setupWaitForReceiveTxEventMock = () => {
