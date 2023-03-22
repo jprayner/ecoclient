@@ -9,28 +9,26 @@ export const fsControlByte = 0x80;
 export const fsPort = 0x99;
 export const replyPort = 0x90;
 
-export const directoryHandles = {
-  userRoot: 0x01,
-  current: 0x02,
-  library: 0x04,
-};
-
 export const stripCRs = (str: string) => str.replace(/\r/g, '');
+
+export type DirectoryHandles = {
+  userRoot: number;
+  current: number;
+  library: number;
+};
 
 export const standardTxMessage = (
   serverPort: number,
   functionCode: number,
-  handleUserRootDir: number,
-  handleCurrentDir: number,
-  handleLibDir: number,
+  handles: DirectoryHandles,
   data: Buffer,
 ) => {
   const header = Buffer.from([
     serverPort,
     functionCode,
-    handleUserRootDir,
-    handleCurrentDir,
-    handleLibDir,
+    handles.userRoot,
+    handles.current,
+    handles.library,
   ]);
   return Buffer.concat([header, data]);
 };
@@ -146,15 +144,14 @@ export const waitForDataOrStatus = async (
 export const executeCliCommand = async (
   serverStation: number,
   command: string,
+  handles: DirectoryHandles,
 ) => {
   const functionCode = 0x00;
 
   const msg = standardTxMessage(
     replyPort,
     functionCode,
-    directoryHandles.userRoot,
-    directoryHandles.current,
-    directoryHandles.library,
+    handles,
     Buffer.from(`${command}\r`),
   );
 

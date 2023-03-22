@@ -48,7 +48,11 @@ describe('load protocol handler', () => {
       data: Buffer.from([]),
     });
 
-    const result = await load(254, 'FNAME');
+    const result = await load(254, 'FNAME', {
+      userRoot: 0,
+      current: 1,
+      library: 2,
+    });
     expect(result.actualFilename).toEqual('FNAME');
     expect(result.loadAddr).toEqual(loadAddr);
     expect(result.execAddr).toEqual(execAddr);
@@ -77,9 +81,9 @@ describe('load protocol handler', () => {
         },
       );
 
-    await expect(load(254, 'FNAME')).rejects.toThrowError(
-      'Failed to send LOAD command to station 254',
-    );
+    await expect(
+      load(254, 'FNAME', { userRoot: 0, current: 1, library: 2 }),
+    ).rejects.toThrowError('Failed to send LOAD command to station 254');
   });
 
   it('should handle truncated server response correctly', async () => {
@@ -98,7 +102,9 @@ describe('load protocol handler', () => {
       },
     );
 
-    await expect(load(254, 'FNAME')).rejects.toThrowError(
+    await expect(
+      load(254, 'FNAME', { userRoot: 0, current: 1, library: 2 }),
+    ).rejects.toThrowError(
       'Malformed response in LOAD from station 254: success but not enough data',
     );
   });
@@ -120,9 +126,9 @@ describe('load protocol handler', () => {
       },
     );
 
-    await expect(load(254, 'FNAME')).rejects.toThrowError(
-      'Something bad happened',
-    );
+    await expect(
+      load(254, 'FNAME', { userRoot: 0, current: 1, library: 2 }),
+    ).rejects.toThrowError('Something bad happened');
   });
 
   it('should load report mid-transfer file load error correctly', async () => {
@@ -140,9 +146,9 @@ describe('load protocol handler', () => {
       data: Buffer.from('Oh dear, oh dear\r'),
     });
 
-    await expect(load(254, 'FNAME')).rejects.toThrowError(
-      'Load failed during delivery: Oh dear, oh dear',
-    );
+    await expect(
+      load(254, 'FNAME', { userRoot: 0, current: 1, library: 2 }),
+    ).rejects.toThrowError('Load failed during delivery: Oh dear, oh dear');
   });
 });
 

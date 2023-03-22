@@ -46,7 +46,11 @@ describe('objectInfo protocol handler', () => {
       },
     );
 
-    const result = await readDirAccessObjectInfo(254, '$');
+    const result = await readDirAccessObjectInfo(254, '$', {
+      userRoot: 0,
+      current: 1,
+      library: 2,
+    });
     expect(result).toEqual({
       dirName: 'SOMEDIR',
       isOwner: true,
@@ -72,7 +76,13 @@ describe('objectInfo protocol handler', () => {
         },
       );
 
-    await expect(readDirAccessObjectInfo(254, '$')).rejects.toThrowError(
+    await expect(
+      readDirAccessObjectInfo(254, '$', {
+        userRoot: 0,
+        current: 1,
+        library: 2,
+      }),
+    ).rejects.toThrowError(
       'Failed to send object info command (0x12) to station 254: Something bad happened',
     );
   });
@@ -105,7 +115,13 @@ describe('objectInfo protocol handler', () => {
       },
     );
 
-    await expect(readDirAccessObjectInfo(254, '$')).rejects.toThrowError(
+    await expect(
+      readDirAccessObjectInfo(254, '$', {
+        userRoot: 0,
+        current: 1,
+        library: 2,
+      }),
+    ).rejects.toThrowError(
       'Malformed response from station 254: success but not enough data',
     );
   });

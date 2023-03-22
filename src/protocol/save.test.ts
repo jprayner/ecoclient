@@ -49,7 +49,11 @@ describe('save protocol handler', () => {
       data: Buffer.from([]),
     });
 
-    const result = await load(254, 'FNAME');
+    const result = await load(254, 'FNAME', {
+      userRoot: 0,
+      current: 1,
+      library: 2,
+    });
     expect(result.actualFilename).toEqual('FNAME');
     expect(result.loadAddr).toEqual(loadAddr);
     expect(result.execAddr).toEqual(execAddr);

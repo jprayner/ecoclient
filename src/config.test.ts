@@ -4,6 +4,13 @@ import {
   setLocalStationNum,
   setServerStationNum,
   deleteConfig,
+  getHandles,
+  getHandleCurrentDir,
+  getHandleUserRootDir,
+  getHandleLibDir,
+  setHandleCurrentDir,
+  setHandleUserRootDir,
+  setHandleLibDir,
 } from './config';
 
 let originalLocalStationNum: number | undefined;
@@ -58,5 +65,37 @@ describe('config', () => {
     await expect(setServerStationNum(1.1)).rejects.toThrowError(
       'Invalid station number 1.1',
     );
+  });
+
+  it('should successfully set and fetch directory handles', async () => {
+    await setHandleUserRootDir(1);
+    await setHandleCurrentDir(2);
+    await setHandleLibDir(3);
+    expect(await getHandles()).toEqual({
+      userRoot: 1,
+      current: 2,
+      library: 3,
+    });
+  });
+
+  it('should throw error on attempt to retrieve undefined directory handles', async () => {
+    await expect(getHandles()).rejects.toThrowError(
+      'Directory handle(s) missing from config file - please run I AM command',
+    );
+  });
+
+  it('should retrieve user root directory handle', async () => {
+    await setHandleUserRootDir(1);
+    expect(await getHandleUserRootDir()).toEqual(1);
+  });
+
+  it('should retrieve current directory handle', async () => {
+    await setHandleCurrentDir(2);
+    expect(await getHandleCurrentDir()).toEqual(2);
+  });
+
+  it('should retrieve library directory handle', async () => {
+    await setHandleLibDir(3);
+    expect(await getHandleLibDir()).toEqual(3);
   });
 });

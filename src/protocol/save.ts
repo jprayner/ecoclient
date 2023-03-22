@@ -1,5 +1,5 @@
 import {
-  directoryHandles,
+  DirectoryHandles,
   fsControlByte,
   fsPort,
   responseMatcher,
@@ -16,6 +16,7 @@ export const save = async (
   remoteFilename: string,
   loadAddr: number,
   execAddr: number,
+  handles: DirectoryHandles,
 ) => {
   const loadTimeoutMs = 10000;
   const replyPort = 0x90;
@@ -51,9 +52,11 @@ export const save = async (
   const msg = standardTxMessage(
     replyPort,
     functionCode,
-    ackPort,
-    directoryHandles.current,
-    directoryHandles.library,
+    {
+      userRoot: ackPort, // Unusual handling for SAVE: ack lives here
+      current: handles.current,
+      library: handles.library,
+    },
     requestData,
   );
 

@@ -1,8 +1,8 @@
 import { driver } from '@jprayner/piconet-nodejs';
 import {
+  DirectoryHandles,
   fsControlByte,
   fsPort,
-  directoryHandles,
   standardTxMessage,
   waitForReceiveTxEvent,
 } from '../common';
@@ -10,6 +10,7 @@ import {
 export const readDirAccessObjectInfo = async (
   serverStation: number,
   dirPath: string,
+  handles: DirectoryHandles,
 ) => {
   const replyPort = 0x90;
   const functionCode = 0x12;
@@ -29,9 +30,7 @@ export const readDirAccessObjectInfo = async (
   const msg = standardTxMessage(
     replyPort,
     functionCode,
-    directoryHandles.userRoot,
-    directoryHandles.current,
-    directoryHandles.library,
+    handles,
     Buffer.concat([objectInfoHeader, objectInfoTrailer]),
   );
 

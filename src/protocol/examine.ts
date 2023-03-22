@@ -2,7 +2,7 @@ import { driver } from '@jprayner/piconet-nodejs';
 import {
   fsControlByte,
   fsPort,
-  directoryHandles,
+  DirectoryHandles,
   standardTxMessage,
   stripCRs,
   waitForReceiveTxEvent,
@@ -21,7 +21,11 @@ export type FileInfo = {
   access: string;
 };
 
-export const examineDir = async (serverStation: number, dirPath: string) => {
+export const examineDir = async (
+  serverStation: number,
+  dirPath: string,
+  handles: DirectoryHandles,
+) => {
   const replyPort = 0x90;
   const functionCode = 0x03;
 
@@ -46,9 +50,7 @@ export const examineDir = async (serverStation: number, dirPath: string) => {
     const msg = standardTxMessage(
       replyPort,
       functionCode,
-      directoryHandles.userRoot,
-      directoryHandles.current,
-      directoryHandles.library,
+      handles,
       Buffer.concat([examineHeader, examinePathTrailer]),
     );
 

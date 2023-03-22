@@ -22,11 +22,18 @@ describe('iAm protocol handler', () => {
     expect(executeCliCommandMock).toHaveBeenCalledWith(
       254,
       'I AM JPR93 MYPASS',
+      {
+        userRoot: 0,
+        current: 0,
+        library: 0,
+      },
     );
     expect(result).toEqual({
-      handleCurrentDir: 0,
-      handleUserRootDir: 1,
-      handleLibDir: 2,
+      directoryHandles: {
+        userRoot: 1,
+        current: 0,
+        library: 2,
+      },
       bootOption: 3,
     });
   });

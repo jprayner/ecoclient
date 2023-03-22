@@ -280,7 +280,11 @@ describe('common.executeCliCommand', () => {
           );
         },
       );
-    const resultPromise = executeCliCommand(254, 'BYE');
+    const resultPromise = executeCliCommand(254, 'BYE', {
+      userRoot: 0,
+      current: 1,
+      library: 2,
+    });
     const result = await resultPromise;
 
     expect(transmitSpy).toHaveBeenCalled();
@@ -306,7 +310,9 @@ describe('common.executeCliCommand', () => {
         },
       );
     const waitForEventSpy = jest.spyOn(driver, 'waitForEvent');
-    await expect(executeCliCommand(254, 'BYE')).rejects.toThrowError(
+    await expect(
+      executeCliCommand(254, 'BYE', { userRoot: 0, current: 1, library: 2 }),
+    ).rejects.toThrowError(
       'Failed to send command to station 254: invalid station number',
     );
     expect(transmitSpy).toHaveBeenCalled();
@@ -350,9 +356,9 @@ describe('common.executeCliCommand', () => {
           );
         },
       );
-    await expect(executeCliCommand(254, 'BYE')).rejects.toThrowError(
-      'Bad things are occuring',
-    );
+    await expect(
+      executeCliCommand(254, 'BYE', { userRoot: 0, current: 1, library: 2 }),
+    ).rejects.toThrowError('Bad things are occuring');
     expect(transmitSpy).toHaveBeenCalled();
     expect(waitForEventSpy).toHaveBeenCalled();
   });

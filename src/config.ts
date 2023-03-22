@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { DirectoryHandles } from './common';
 
 const configDir = '.ecoclient';
 const configFilename = 'config.json';
@@ -10,21 +11,22 @@ const configFilePath = path.join(configDirPath, configFilename);
 type Config = {
   localStationNum: number | undefined;
   serverStationNum: number;
+  handleUserRootDir: number | undefined;
+  handleCurrentDir: number | undefined;
+  handleLibDir: number | undefined;
 };
 
 const defaultConfig: Config = {
   localStationNum: undefined,
   serverStationNum: 254,
+  handleUserRootDir: undefined,
+  handleCurrentDir: undefined,
+  handleLibDir: undefined,
 };
 
 export const getLocalStationNum = async (): Promise<number | undefined> => {
   const { localStationNum } = await readConfigOrUseDefault();
   return localStationNum;
-};
-
-export const getServerStationNum = async (): Promise<number> => {
-  const { serverStationNum } = await readConfigOrUseDefault();
-  return serverStationNum;
 };
 
 export const setLocalStationNum = async (stationNum: number): Promise<void> => {
@@ -36,6 +38,11 @@ export const setLocalStationNum = async (stationNum: number): Promise<void> => {
   await writeConfig(config);
 };
 
+export const getServerStationNum = async (): Promise<number> => {
+  const { serverStationNum } = await readConfigOrUseDefault();
+  return serverStationNum;
+};
+
 export const setServerStationNum = async (
   stationNum: number,
 ): Promise<void> => {
@@ -45,6 +52,57 @@ export const setServerStationNum = async (
 
   const config = await readConfigOrUseDefault();
   config.serverStationNum = stationNum;
+  await writeConfig(config);
+};
+
+export const getHandles = async (): Promise<DirectoryHandles> => {
+  const config = await readConfigOrUseDefault();
+  if (
+    config.handleUserRootDir === undefined ||
+    config.handleCurrentDir === undefined ||
+    config.handleLibDir === undefined
+  ) {
+    throw new Error(
+      'Directory handle(s) missing from config file - please run I AM command',
+    );
+  }
+  return {
+    userRoot: config.handleUserRootDir,
+    current: config.handleCurrentDir,
+    library: config.handleLibDir,
+  };
+};
+
+export const getHandleUserRootDir = async (): Promise<number | undefined> => {
+  const { handleUserRootDir } = await readConfigOrUseDefault();
+  return handleUserRootDir;
+};
+
+export const setHandleUserRootDir = async (handle: number): Promise<void> => {
+  const config = await readConfigOrUseDefault();
+  config.handleUserRootDir = handle;
+  await writeConfig(config);
+};
+
+export const getHandleCurrentDir = async (): Promise<number | undefined> => {
+  const { handleCurrentDir } = await readConfigOrUseDefault();
+  return handleCurrentDir;
+};
+
+export const setHandleCurrentDir = async (handle: number): Promise<void> => {
+  const config = await readConfigOrUseDefault();
+  config.handleCurrentDir = handle;
+  await writeConfig(config);
+};
+
+export const getHandleLibDir = async (): Promise<number | undefined> => {
+  const { handleLibDir } = await readConfigOrUseDefault();
+  return handleLibDir;
+};
+
+export const setHandleLibDir = async (handle: number): Promise<void> => {
+  const config = await readConfigOrUseDefault();
+  config.handleLibDir = handle;
   await writeConfig(config);
 };
 
@@ -113,6 +171,24 @@ const readConfig = async (): Promise<Config> => {
       ? fileAsObject.serverStationNum
       : undefined;
 
+  const handleUserRootDir =
+    'handleUserRootDir' in fileAsObject &&
+    typeof fileAsObject.handleUserRootDir === 'number'
+      ? fileAsObject.handleUserRootDir
+      : undefined;
+
+  const handleCurrentDir =
+    'handleCurrentDir' in fileAsObject &&
+    typeof fileAsObject.handleCurrentDir === 'number'
+      ? fileAsObject.handleCurrentDir
+      : undefined;
+
+  const handleLibDir =
+    'handleLibDir' in fileAsObject &&
+    typeof fileAsObject.handleLibDir === 'number'
+      ? fileAsObject.handleLibDir
+      : undefined;
+
   return {
     localStationNum:
       validStationNumOrUndefined(localStationNum) ??
@@ -120,6 +196,9 @@ const readConfig = async (): Promise<Config> => {
     serverStationNum:
       validStationNumOrUndefined(serverStationNum) ??
       defaultConfig.serverStationNum,
+    handleUserRootDir,
+    handleCurrentDir,
+    handleLibDir,
   };
 };
 
@@ -130,6 +209,9 @@ const readConfigOrUseDefault = async (): Promise<Config> => {
     return {
       localStationNum: defaultConfig.localStationNum,
       serverStationNum: defaultConfig.serverStationNum,
+      handleUserRootDir: defaultConfig.handleUserRootDir,
+      handleCurrentDir: defaultConfig.handleCurrentDir,
+      handleLibDir: defaultConfig.handleLibDir,
     };
   }
 };

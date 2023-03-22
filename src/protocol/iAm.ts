@@ -1,4 +1,4 @@
-import { executeCliCommand } from '../common';
+import { DirectoryHandles, executeCliCommand } from '../common';
 
 export const iAm = async (
   serverStation: number,
@@ -8,6 +8,11 @@ export const iAm = async (
   const serverReply = await executeCliCommand(
     serverStation,
     `I AM ${username} ${password}`,
+    {
+      userRoot: 0,
+      current: 0,
+      library: 0,
+    },
   );
 
   if (serverReply.data.length < 4) {
@@ -17,9 +22,11 @@ export const iAm = async (
   }
 
   return {
-    handleCurrentDir: serverReply.data[0],
-    handleUserRootDir: serverReply.data[1],
-    handleLibDir: serverReply.data[2],
+    directoryHandles: {
+      userRoot: serverReply.data[1],
+      current: serverReply.data[0],
+      library: serverReply.data[2],
+    } as DirectoryHandles,
     bootOption: serverReply.data[3],
   };
 };

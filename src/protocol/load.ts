@@ -1,15 +1,19 @@
 import {
   fsControlByte,
-  directoryHandles,
   fsPort,
   standardTxMessage,
   stripCRs,
   waitForReceiveTxEvent,
   waitForDataOrStatus,
+  DirectoryHandles,
 } from '../common';
 import { driver } from '@jprayner/piconet-nodejs';
 
-export const load = async (serverStation: number, filename: string) => {
+export const load = async (
+  serverStation: number,
+  filename: string,
+  handles: DirectoryHandles,
+) => {
   const loadTimeoutMs = 10000;
   const replyPort = 0x90;
   const dataPort = 0x92;
@@ -18,9 +22,11 @@ export const load = async (serverStation: number, filename: string) => {
   const msg = standardTxMessage(
     replyPort,
     functionCode,
-    dataPort,
-    directoryHandles.current,
-    directoryHandles.library,
+    {
+      userRoot: dataPort, // Unusual handling for LOAD: dataPort lives here
+      current: handles.current,
+      library: handles.library,
+    },
     Buffer.from(`${filename}\r`),
   );
 

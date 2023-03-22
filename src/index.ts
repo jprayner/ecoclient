@@ -17,10 +17,14 @@ import { PKG_VERSION } from './version';
 import {
   getLocalStationNum,
   getServerStationNum,
+  setHandleCurrentDir,
+  setHandleLibDir,
+  setHandleUserRootDir,
   setLocalStationNum,
   setServerStationNum,
+  getHandles,
 } from './config';
-import { spawn, spawnSync } from 'child_process';
+import { spawnSync } from 'child_process';
 import { dir } from './protocol/dir';
 
 const commandIAm = async (
@@ -32,20 +36,23 @@ const commandIAm = async (
     options,
   );
   await initConnection(deviceName, localStation);
-  await iAm(serverStation, username, password);
+
+  const result = await iAm(serverStation, username, password);
+  await setHandleUserRootDir(result.directoryHandles.userRoot);
+  await setHandleCurrentDir(result.directoryHandles.current);
+  await setHandleLibDir(result.directoryHandles.library);
+
   await driver.close();
 };
 
-const commandDir = async (
-  dirPath: string,
-  options: object,
-) => {
+const commandDir = async (dirPath: string, options: object) => {
   const { deviceName, serverStation, localStation } = await resolveOptions(
     options,
   );
   await initConnection(deviceName, localStation);
-  const dirInfo = await dir(serverStation, dirPath);
-  console.log(`New handle: ${dirInfo.handleCurrentDir}`);
+  const dirInfo = await dir(serverStation, dirPath, await getHandles());
+  await setHandleCurrentDir(dirInfo.handleCurrentDir);
+
   await driver.close();
 };
 
@@ -54,7 +61,7 @@ const commandBye = async (options: object) => {
     options,
   );
   await initConnection(deviceName, localStation);
-  await bye(serverStation);
+  await bye(serverStation, await getHandles());
   await driver.close();
 };
 
@@ -63,7 +70,7 @@ const commandCdir = async (dirPath: string, options: object) => {
     options,
   );
   await initConnection(deviceName, localStation);
-  await cdir(serverStation, dirPath);
+  await cdir(serverStation, dirPath, await getHandles());
   await driver.close();
 };
 
@@ -72,7 +79,7 @@ const commandDelete = async (pathToDelete: string, options: object) => {
     options,
   );
   await initConnection(deviceName, localStation);
-  await deleteFile(serverStation, pathToDelete);
+  await deleteFile(serverStation, pathToDelete, await getHandles());
   await driver.close();
 };
 
@@ -85,7 +92,12 @@ const commandAccess = async (
     options,
   );
   await initConnection(deviceName, localStation);
-  await access(serverStation, pathToSetAccess, accessString);
+  await access(
+    serverStation,
+    pathToSetAccess,
+    accessString,
+    await getHandles(),
+  );
   await driver.close();
 };
 
@@ -94,7 +106,7 @@ const commandGet = async (filename: string, options: object) => {
     options,
   );
   await initConnection(deviceName, localStation);
-  const result = await load(serverStation, filename);
+  const result = await load(serverStation, filename, await getHandles());
   fs.writeFileSync(result.actualFilename, result.data);
   await driver.close();
 };
@@ -105,34 +117,60 @@ const commandLoad = async (filename: string, options: object) => {
     options,
   );
   await initConnection(deviceName, localStation);
-  const result = await load(serverStation, filename);
+  const result = await load(serverStation, filename, await getHandles());
   fs.writeFileSync(result.actualFilename, result.data);
 
   try {
     const spawnResult = spawnSync('basictool', [result.actualFilename]);
+    if (spawnResult.error) {
+      throw spawnResult.error;
+    }
     fs.writeFileSync(`${result.actualFilename}.bas`, spawnResult.stdout);
   } catch (e) {
-    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-    console.error(`Failed to launch basictool utility: ${e instanceof Error ? e.message : e} `);
-    // TODO: getting this if tool unavailble: Failed to launch basictool utility: The "data" argument must be of type string or an instance of Buffer, TypedArray, or DataView. Received null 
-  } finally {
-    // TODO: do this stuff in wrapper
-    await driver.close();
+    const msg = e instanceof Error ? e.message : 'unknown error';
+    console.error(
+      'Failed to launch basictool utility which is required to convert tokenised BASIC' +
+        `file to/from text format. Is it installed and in your PATH? Error is: "${msg}"`,
+    );
   }
+
+  // TODO: do this stuff in wrapper
+  await driver.close();
 };
 
-const commandSave = async (localPath: string, destPath: string, options: object) => {
+const commandSave = async (
+  localPath: string,
+  destPath: string,
+  options: object,
+) => {
   const { deviceName, serverStation, localStation } = await resolveOptions(
     options,
   );
   await initConnection(deviceName, localStation);
 
-  const spawnResult = spawnSync('basictool', ['-t', `${localPath}.bas`]);
-  console.log(`stdout: ${spawnResult.stdout.toString('hex')}`);
-  console.log(`destPath: ${destPath}`);
-  console.log(`serverStation: ${serverStation}`);
-  const fileTitle = `${path.basename(destPath)}\r`;
-  await save(serverStation, spawnResult.stdout, fileTitle, 0xffff0e00, 0xffff2b80);
+  try {
+    const spawnResult = spawnSync('basictool', ['-t', `${localPath}.bas`]);
+    if (spawnResult.error) {
+      throw spawnResult.error;
+    }
+
+    const fileTitle = `${path.basename(destPath)}\r`;
+    await save(
+      serverStation,
+      spawnResult.stdout,
+      fileTitle,
+      0xffff0e00,
+      0xffff2b80,
+      await getHandles(),
+    );
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'unknown error';
+    console.error(
+      'Failed to launch basictool utility which is required to convert tokenised BASIC' +
+        `file to/from text. Is it installed and in your PATH? Error is: "${msg}"`,
+    );
+  }
+
   await driver.close();
 };
 
@@ -143,7 +181,14 @@ const commandPut = async (filename: string, options: object) => {
   await initConnection(deviceName, localStation);
   const fileData = fs.readFileSync(filename);
   const fileTitle = `${path.basename(filename)}\r`;
-  await save(serverStation, fileData, fileTitle, 0xffff0e00, 0xffff2b80);
+  await save(
+    serverStation,
+    fileData,
+    fileTitle,
+    0xffff0e00,
+    0xffff2b80,
+    await getHandles(),
+  );
   await driver.close();
 };
 
@@ -152,8 +197,12 @@ const commandCat = async (dirPath: string, options: object) => {
     options,
   );
   await initConnection(deviceName, localStation);
-  const dirInfo = await readDirAccessObjectInfo(serverStation, dirPath);
-  const files = await examineDir(serverStation, dirPath);
+  const dirInfo = await readDirAccessObjectInfo(
+    serverStation,
+    dirPath,
+    await getHandles(),
+  );
+  const files = await examineDir(serverStation, dirPath, await getHandles());
 
   console.log(
     `[${dirInfo.dirName} (${dirInfo.cycleNum}) - ${
@@ -270,7 +319,7 @@ const main = () => {
   program
     .command('dir')
     .description('change current directory')
-    .argument('<dir>', 'directory path')
+    .argument('[dir]', 'directory path', '')
     .addOption(
       new Option('-dev, --device <string>', 'specify PICO serial device'),
     )
@@ -330,27 +379,29 @@ const main = () => {
     )
     .action(errorHnd(commandLoad));
 
-    program
-      .command('save')
-      .description('save basic file after detokenising (needs basictool installed)')
-      .argument('<localPath>', 'path to file on local filesystem')
-      .argument('<destPath>', 'path to file on fileserver')
-      .addOption(
-        new Option('-dev, --device <string>', 'specify PICO serial device'),
-      )
-      .addOption(
-        new Option(
-          '-s, --station <number>',
-          'specify local Econet station number',
-        ),
-      )
-      .addOption(
-        new Option(
-          '-fs, --fileserver <number>',
-          'specify fileserver station number',
-        ).default(254),
-      )  
-      .action(errorHnd(commandSave));
+  program
+    .command('save')
+    .description(
+      'save basic file after detokenising (needs basictool installed)',
+    )
+    .argument('<localPath>', 'path to file on local filesystem')
+    .argument('<destPath>', 'path to file on fileserver')
+    .addOption(
+      new Option('-dev, --device <string>', 'specify PICO serial device'),
+    )
+    .addOption(
+      new Option(
+        '-s, --station <number>',
+        'specify local Econet station number',
+      ),
+    )
+    .addOption(
+      new Option(
+        '-fs, --fileserver <number>',
+        'specify fileserver station number',
+      ).default(254),
+    )
+    .action(errorHnd(commandSave));
 
   program
     .command('put')
@@ -376,7 +427,7 @@ const main = () => {
   program
     .command('cat')
     .description('get catalogue of directory from fileserver')
-    .argument('<dirPath>', 'directory path')
+    .argument('[dirPath]', 'directory path', '')
     .addOption(
       new Option('-dev, --device <string>', 'specify PICO serial device'),
     )
