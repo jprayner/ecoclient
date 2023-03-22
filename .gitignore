@@ -6,7 +6,6 @@ src/version.ts
 /coverage
 *.zip
 .nyc_output
-.npmrc
 .eslintcache
 node_modules/
 .DS_Store
