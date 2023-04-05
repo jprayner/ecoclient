@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { driver, ErrorEvent, RxDataEvent } from '@jprayner/piconet-nodejs';
-import { Command, Option } from 'commander';
+import { Command, CommandOptions, Option } from 'commander';
 import { initConnection, loadFileInfo, saveFileInfo } from './common';
 import { load } from './protocol/load';
 import { save } from './protocol/save';
@@ -28,213 +28,16 @@ import { spawnSync } from 'child_process';
 import { dir } from './protocol/dir';
 import { basename } from 'path';
 
-const commandIAm = async (
-  username: string,
-  password: string,
-  options: object,
-) => {
-  const { deviceName, serverStation, localStation } = await resolveOptions(
-    options,
-  );
-  await initConnection(deviceName, localStation);
-
-  const result = await iAm(serverStation, username, password);
-  await setHandleUserRootDir(result.directoryHandles.userRoot);
-  await setHandleCurrentDir(result.directoryHandles.current);
-  await setHandleLibDir(result.directoryHandles.library);
-
-  await driver.close();
-};
-
-const commandDir = async (dirPath: string, options: object) => {
-  const { deviceName, serverStation, localStation } = await resolveOptions(
-    options,
-  );
-  await initConnection(deviceName, localStation);
-  const dirInfo = await dir(serverStation, dirPath, await getHandles());
-  await setHandleCurrentDir(dirInfo.handleCurrentDir);
-
-  await driver.close();
-};
-
-const commandBye = async (options: object) => {
-  const { deviceName, serverStation, localStation } = await resolveOptions(
-    options,
-  );
-  await initConnection(deviceName, localStation);
-  await bye(serverStation, await getHandles());
-  await driver.close();
-};
-
-const commandCdir = async (dirPath: string, options: object) => {
-  const { deviceName, serverStation, localStation } = await resolveOptions(
-    options,
-  );
-  await initConnection(deviceName, localStation);
-  await cdir(serverStation, dirPath, await getHandles());
-  await driver.close();
-};
-
-const commandDelete = async (pathToDelete: string, options: object) => {
-  const { deviceName, serverStation, localStation } = await resolveOptions(
-    options,
-  );
-  await initConnection(deviceName, localStation);
-  await deleteFile(serverStation, pathToDelete, await getHandles());
-  await driver.close();
-};
-
-const commandAccess = async (
-  pathToSetAccess: string,
-  accessString: string,
-  options: object,
-) => {
-  const { deviceName, serverStation, localStation } = await resolveOptions(
-    options,
-  );
-  await initConnection(deviceName, localStation);
-  await access(
-    serverStation,
-    pathToSetAccess,
-    accessString,
-    await getHandles(),
-  );
-  await driver.close();
-};
-
-const commandGet = async (filename: string, options: object) => {
-  const { deviceName, serverStation, localStation } = await resolveOptions(
-    options,
-  );
-  await initConnection(deviceName, localStation);
-  const result = await load(serverStation, filename, await getHandles());
-  fs.writeFileSync(result.actualFilename, result.data);
-  saveFileInfo(result.actualFilename, {
-    originalFilename: result.actualFilename,
-    loadAddr: result.loadAddr,
-    execAddr: result.execAddr,
-  });
-  await driver.close();
-};
-
 const basicLoadAddr = 0xffff0e00;
 const basicExecAddr = 0xffff2b80;
-const commandPut = async (filename: string, options: object) => {
-  const { deviceName, serverStation, localStation } = await resolveOptions(
-    options,
-  );
-  await initConnection(deviceName, localStation);
-  const fileInfo = loadFileInfo(filename);
-  const fileData = fs.readFileSync(filename);
-  const fileTitle = `${path.basename(filename)}`;
-  await save(
-    serverStation,
-    fileData,
-    fileInfo?.originalFilename || fileTitle,
-    fileInfo?.loadAddr || basicLoadAddr,
-    fileInfo?.execAddr || basicExecAddr,
-    await getHandles(),
-  );
-  await driver.close();
-};
 
-const commandLoad = async (filename: string, options: object) => {
-  // TODO: do this stuff in wrapper
-  const { deviceName, serverStation, localStation } = await resolveOptions(
-    options,
-  );
-  await initConnection(deviceName, localStation);
-  const result = await load(serverStation, filename, await getHandles());
-  const tempFile = `${result.actualFilename}.tmp`;
-  fs.writeFileSync(tempFile, result.data);
-
-  try {
-    const spawnResult = spawnSync('basictool', [tempFile]);
-    if (spawnResult.error) {
-      throw spawnResult.error;
-    }
-    fs.writeFileSync(`${result.actualFilename}.bas`, spawnResult.stdout);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'unknown error';
-    console.error(
-      'Failed to launch basictool utility which is required to convert tokenised BASIC' +
-        `file to/from text format. Is it installed and in your PATH? Error is: "${msg}"`,
-    );
-  }
-
-  fs.rmSync(tempFile, { force: true });
-
-  // TODO: do this stuff in wrapper
-  await driver.close();
-};
-
-const commandSave = async (
-  localPath: string,
-  optionalDestPath: string | undefined,
-  options: object,
-) => {
-  const { deviceName, serverStation, localStation } = await resolveOptions(
-    options,
-  );
-  await initConnection(deviceName, localStation);
-  const localFilenameNoBasSuffix = basename(localPath).replace(/\.bas$/, '');
-  const destPath = optionalDestPath || localFilenameNoBasSuffix;
-
-  let spawnResult;
-  try {
-    spawnResult = spawnSync('basictool', ['-t', `${localPath}`]);
-    if (spawnResult.error) {
-      throw spawnResult.error;
-    }
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'unknown error';
-    console.error(
-      'Failed to launch basictool utility which is required to convert tokenised BASIC' +
-        `file to/from text. Is it installed and in your PATH? Error is: "${msg}"`,
-    );
-    await driver.close();
-    return;
-  }
-
-  await save(
-    serverStation,
-    spawnResult.stdout,
-    `${destPath}`,
-    basicLoadAddr,
-    basicExecAddr,
-    await getHandles(),
-  );
-
-  await driver.close();
-};
-
-const commandCat = async (dirPath: string, options: object) => {
-  const { deviceName, serverStation, localStation } = await resolveOptions(
-    options,
-  );
-  await initConnection(deviceName, localStation);
-  const dirInfo = await readDirAccessObjectInfo(
-    serverStation,
-    dirPath,
-    await getHandles(),
-  );
-  const files = await examineDir(serverStation, dirPath, await getHandles());
-
-  console.log(
-    `[${dirInfo.dirName} (${dirInfo.cycleNum}) - ${
-      dirInfo.isOwner ? 'Owner' : 'Public'
-    }]`,
-  );
-  for (const f of files) {
-    console.log(
-      `${f.name.padEnd(10)} ${f.loadAddress.padEnd(8)} ${f.execAddress.padEnd(
-        8,
-      )}  ${f.sizeBytes.toString(10).padStart(8)} ${f.access.padEnd(10)} ${
-        f.date
-      } ${f.id}`,
-    );
-  }
-  await driver.close();
+/**
+ * Options which may come from config or be overridden at the command line.
+ */
+type ConfigOptions = {
+  deviceName: string;
+  localStation: number;
+  serverStation: number;
 };
 
 const commandSetStation = async (station: string) => {
@@ -246,19 +49,14 @@ const commandSetFileserver = async (station: string) => {
 };
 
 const commandNotify = async (
+  options: CommandOptions,
   station: string,
   message: string,
-  options: object,
 ) => {
-  const { deviceName, localStation } = await resolveOptions(options);
-  await initConnection(deviceName, localStation);
   await notify(parseInt(station), message);
-  await driver.close();
 };
 
-const commandMonitor = async (options: object) => {
-  const { deviceName, localStation } = await resolveOptions(options);
-  await initConnection(deviceName, localStation);
+const commandMonitor = async () => {
   driver.addListener(event => {
     if (event instanceof ErrorEvent) {
       console.error(`ERROR: ${event.description}`);
@@ -282,6 +80,163 @@ const commandMonitor = async (options: object) => {
   });
 };
 
+const commandIAm = async (
+  options: ConfigOptions,
+  username: string,
+  password: string,
+) => {
+  const result = await iAm(options.serverStation, username, password);
+  await setHandleUserRootDir(result.directoryHandles.userRoot);
+  await setHandleCurrentDir(result.directoryHandles.current);
+  await setHandleLibDir(result.directoryHandles.library);
+};
+
+const commandDir = async (options: ConfigOptions, dirPath: string) => {
+  const dirInfo = await dir(options.serverStation, dirPath, await getHandles());
+  await setHandleCurrentDir(dirInfo.handleCurrentDir);
+};
+
+const commandBye = async (options: ConfigOptions) => {
+  await bye(options.serverStation, await getHandles());
+};
+
+const commandCdir = async (options: ConfigOptions, dirPath: string) => {
+  await cdir(options.serverStation, dirPath, await getHandles());
+};
+
+const commandDelete = async (options: ConfigOptions, pathToDelete: string) => {
+  await deleteFile(options.serverStation, pathToDelete, await getHandles());
+};
+
+const commandAccess = async (
+  options: ConfigOptions,
+  pathToSetAccess: string,
+  accessString: string,
+) => {
+  await access(
+    options.serverStation,
+    pathToSetAccess,
+    accessString,
+    await getHandles(),
+  );
+};
+
+const commandGet = async (options: ConfigOptions, filename: string) => {
+  const result = await load(
+    options.serverStation,
+    filename,
+    await getHandles(),
+  );
+  fs.writeFileSync(result.actualFilename, result.data);
+  saveFileInfo(result.actualFilename, {
+    originalFilename: result.actualFilename,
+    loadAddr: result.loadAddr,
+    execAddr: result.execAddr,
+  });
+};
+
+const commandPut = async (options: ConfigOptions, filename: string) => {
+  const fileInfo = loadFileInfo(filename);
+  const fileData = fs.readFileSync(filename);
+  const fileTitle = `${path.basename(filename)}`;
+  await save(
+    options.serverStation,
+    fileData,
+    fileInfo?.originalFilename || fileTitle,
+    fileInfo?.loadAddr || basicLoadAddr,
+    fileInfo?.execAddr || basicExecAddr,
+    await getHandles(),
+  );
+};
+
+const commandLoad = async (options: ConfigOptions, filename: string) => {
+  const result = await load(
+    options.serverStation,
+    filename,
+    await getHandles(),
+  );
+  const tempFile = `${result.actualFilename}.tmp`;
+  fs.writeFileSync(tempFile, result.data);
+
+  try {
+    const spawnResult = spawnSync('basictool', [tempFile]);
+    if (spawnResult.error) {
+      throw spawnResult.error;
+    }
+    fs.writeFileSync(`${result.actualFilename}.bas`, spawnResult.stdout);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'unknown error';
+    console.error(
+      'Failed to launch basictool utility which is required to convert tokenised BASIC' +
+        `file to/from text format. Is it installed and in your PATH? Error is: "${msg}"`,
+    );
+  }
+
+  fs.rmSync(tempFile, { force: true });
+};
+
+const commandSave = async (
+  options: ConfigOptions,
+  localPath: string,
+  optionalDestPath: string | undefined,
+) => {
+  const localFilenameNoBasSuffix = basename(localPath).replace(/\.bas$/, '');
+  const destPath = optionalDestPath || localFilenameNoBasSuffix;
+
+  let spawnResult;
+  try {
+    spawnResult = spawnSync('basictool', ['-t', `${localPath}`]);
+    if (spawnResult.error) {
+      throw spawnResult.error;
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'unknown error';
+    console.error(
+      'Failed to launch basictool utility which is required to convert tokenised BASIC' +
+        `file to/from text. Is it installed and in your PATH? Error is: "${msg}"`,
+    );
+    await driver.close();
+    return;
+  }
+
+  await save(
+    options.serverStation,
+    spawnResult.stdout,
+    `${destPath}`,
+    basicLoadAddr,
+    basicExecAddr,
+    await getHandles(),
+  );
+};
+
+const commandCat = async (options: ConfigOptions, dirPath: string) => {
+  const dirInfo = await readDirAccessObjectInfo(
+    options.serverStation,
+    dirPath,
+    await getHandles(),
+  );
+  const files = await examineDir(
+    options.serverStation,
+    dirPath,
+    await getHandles(),
+  );
+
+  console.log(
+    `[${dirInfo.dirName} (${dirInfo.cycleNum}) - ${
+      dirInfo.isOwner ? 'Owner' : 'Public'
+    }]`,
+  );
+  for (const f of files) {
+    console.log(
+      `${f.name.padEnd(10)} ${f.loadAddress.padEnd(8)} ${f.execAddress.padEnd(
+        8,
+      )}  ${f.sizeBytes.toString(10).padStart(8)} ${f.access.padEnd(10)} ${
+        f.date
+      } ${f.id}`,
+    );
+  }
+};
+
 const main = () => {
   const program = new Command();
 
@@ -289,6 +244,38 @@ const main = () => {
     .name('ecoclient')
     .description('Econet fileserver client')
     .version(PKG_VERSION);
+
+  program
+    .command('set-fs')
+    .description('set fileserver')
+    .argument('<station>', 'station number')
+    .action(errorHandlingDecorator(commandSetFileserver));
+
+  program
+    .command('set-station')
+    .description('set Econet station')
+    .argument('<station>', 'station number')
+    .action(errorHandlingDecorator(commandSetStation));
+
+  program
+    .command('notify')
+    .description(
+      'send notification message to a station like a "*NOTIFY" command',
+    )
+    .argument('<station>', 'station number')
+    .argument('<message>', 'message')
+    .addOption(
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
+    )
+    .action(connectionDecorator(commandNotify));
+
+  program
+    .command('monitor')
+    .description('listen for network traffic like a "*NETMON" command')
+    .addOption(
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
+    )
+    .action(connectionDecorator(commandMonitor));
 
   program
     .command('i-am')
@@ -310,7 +297,7 @@ const main = () => {
         'specify fileserver station number',
       ).default(254),
     )
-    .action(errorHnd(commandIAm));
+    .action(connectionDecorator(commandIAm));
 
   program
     .command('bye')
@@ -330,7 +317,7 @@ const main = () => {
         'specify fileserver station number',
       ).default(254),
     )
-    .action(errorHnd(commandBye));
+    .action(connectionDecorator(commandBye));
 
   program
     .command('dir')
@@ -351,7 +338,7 @@ const main = () => {
         'specify fileserver station number',
       ).default(254),
     )
-    .action(errorHnd(commandDir));
+    .action(connectionDecorator(commandDir));
 
   program
     .command('get')
@@ -372,7 +359,7 @@ const main = () => {
         'specify fileserver station number',
       ).default(254),
     )
-    .action(errorHnd(commandGet));
+    .action(connectionDecorator(commandGet));
 
   program
     .command('put')
@@ -393,7 +380,7 @@ const main = () => {
         'specify fileserver station number',
       ).default(254),
     )
-    .action(errorHnd(commandPut));
+    .action(connectionDecorator(commandPut));
 
   program
     .command('load')
@@ -414,7 +401,7 @@ const main = () => {
         'specify fileserver station number',
       ).default(254),
     )
-    .action(errorHnd(commandLoad));
+    .action(connectionDecorator(commandLoad));
 
   program
     .command('save')
@@ -441,7 +428,7 @@ const main = () => {
         'specify fileserver station number',
       ).default(254),
     )
-    .action(errorHnd(commandSave));
+    .action(connectionDecorator(commandSave));
 
   program
     .command('cat')
@@ -462,7 +449,7 @@ const main = () => {
         'specify fileserver station number',
       ).default(1),
     )
-    .action(errorHnd(commandCat));
+    .action(connectionDecorator(commandCat));
 
   program
     .command('cdir')
@@ -483,7 +470,7 @@ const main = () => {
         'specify fileserver station number',
       ).default(254),
     )
-    .action(errorHnd(commandCdir));
+    .action(connectionDecorator(commandCdir));
 
   program
     .command('delete')
@@ -504,7 +491,7 @@ const main = () => {
         'specify fileserver station number',
       ).default(254),
     )
-    .action(errorHnd(commandDelete));
+    .action(connectionDecorator(commandDelete));
 
   program
     .command('access')
@@ -526,44 +513,45 @@ const main = () => {
         'specify fileserver station number',
       ).default(254),
     )
-    .action(errorHnd(commandAccess));
-
-  program
-    .command('set-fs')
-    .description('set fileserver')
-    .argument('<station>', 'station number')
-    .action(errorHnd(commandSetFileserver));
-
-  program
-    .command('set-station')
-    .description('set Econet station')
-    .argument('<station>', 'station number')
-    .action(errorHnd(commandSetStation));
-
-  program
-    .command('notify')
-    .description(
-      'send notification message to a station like a "*NOTIFY" command',
-    )
-    .argument('<station>', 'station number')
-    .argument('<message>', 'message')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
-    .action(errorHnd(commandNotify));
-
-  program
-    .command('monitor')
-    .description('listen for network traffic like a "*NETMON" command')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
-    .action(errorHnd(commandMonitor));
+    .action(connectionDecorator(commandAccess));
 
   program.parse(process.argv);
 };
 
-const errorHnd =
+/**
+ * Wraps a command function so that a connection with the fileserver is established
+ * before it is invoked and then closed afterwards. It further decorates the function
+ * with some error handling using {@link errorHandlingDecorator}.
+ *
+ * Note that this decorator is not necessary for commands that do not require a connection
+ * e.g. for setting configuration options.
+ *
+ * @param fn The function to wrap.
+ * @returns The decorated function.
+ */
+const connectionDecorator =
+  (fn: (...args: any[]) => Promise<void>) =>
+  async (...args: any[]) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const options: object = args[args.length - 1];
+    const configOptions = await resolveOptions(options);
+    await initConnection(configOptions.deviceName, configOptions.localStation);
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      await errorHandlingDecorator(fn)(configOptions, ...args);
+    } finally {
+      await driver.close();
+    }
+  };
+
+/**
+ * Wraps a command function so that any errors are caught and logged to the console nicely.
+ *
+ * @param fn The function to wrap.
+ * @returns The decorated function.
+ */
+const errorHandlingDecorator =
   (fn: (...args: any[]) => Promise<void>) =>
   async (...args: any[]) => {
     try {
@@ -619,7 +607,7 @@ const resolveOptions = async (options: object) => {
   if (typeof serverStation === 'undefined') {
     throw new Error('You must specify a fileserver number');
   }
-  return { deviceName, serverStation, localStation };
+  return { deviceName, serverStation, localStation } as ConfigOptions;
 };
 
 main();
