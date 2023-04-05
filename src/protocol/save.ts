@@ -2,6 +2,7 @@ import {
   DirectoryHandles,
   fsControlByte,
   fsPort,
+  logProgress,
   responseMatcher,
   standardTxMessage,
   stripCRs,
@@ -18,7 +19,6 @@ export const save = async (
   execAddr: number,
   handles: DirectoryHandles,
 ) => {
-  const loadTimeoutMs = 10000;
   const replyPort = 0x90;
   const ackPort = 0x91;
   const functionCode = 0x01;
@@ -40,7 +40,7 @@ export const save = async (
     (fileData.length >> 8) & 0xff,
     (fileData.length >> 16) & 0xff,
   ]);
-  const bufferFileTitle = Buffer.from(remoteFilename);
+  const bufferFileTitle = Buffer.from(`${remoteFilename}\r`);
 
   const requestData = Buffer.concat([
     bufferLoadAddr,
@@ -53,7 +53,7 @@ export const save = async (
     replyPort,
     functionCode,
     {
-      userRoot: ackPort, // Unusual handling for SAVE: ack lives here
+      userRoot: ackPort, // Unusual handling for SAVE: ack port lives here
       current: handles.current,
       library: handles.library,
     },
@@ -91,13 +91,11 @@ export const save = async (
 
   const dataPort = serverReply.data[0];
   const blockSize = serverReply.data.readUInt16LE(1);
-
-  const startTime = Date.now();
   let dataLeftToSend = Buffer.from(fileData);
-  while (dataLeftToSend.length > 0 && Date.now() - startTime < loadTimeoutMs) {
+  const fileSize = dataLeftToSend.length;
+  while (dataLeftToSend.length > 0) {
     const dataToSend = dataLeftToSend.slice(0, blockSize);
     dataLeftToSend = dataLeftToSend.slice(blockSize);
-
     const dataTxResult = await driver.transmit(
       serverStation,
       0,
@@ -105,7 +103,6 @@ export const save = async (
       dataPort,
       dataToSend,
     );
-
     if (!dataTxResult.success) {
       throw new Error(`Failed to send SAVE data to station ${serverStation}`);
     }
@@ -113,7 +110,11 @@ export const save = async (
     if (dataLeftToSend.length > 0) {
       await waitForAckEvent(serverStation, ackPort);
     }
+    const sentBytes = fileSize - dataToSend.length;
+    const percentComplete = Math.round(100 * (sentBytes / fileSize));
+    logProgress(`Saving ${sentBytes}/${fileSize} bytes [${percentComplete}%]`);
   }
+  logProgress('');
 
   const finalReply = await waitForSaveStatus(
     serverStation,

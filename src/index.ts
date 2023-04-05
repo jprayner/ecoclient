@@ -5,7 +5,7 @@ import * as path from 'path';
 
 import { driver, ErrorEvent, RxDataEvent } from '@jprayner/piconet-nodejs';
 import { Command, Option } from 'commander';
-import { initConnection } from './common';
+import { initConnection, loadFileInfo, saveFileInfo } from './common';
 import { load } from './protocol/load';
 import { save } from './protocol/save';
 import { readDirAccessObjectInfo } from './protocol/objectInfo';
@@ -26,6 +26,7 @@ import {
 } from './config';
 import { spawnSync } from 'child_process';
 import { dir } from './protocol/dir';
+import { basename } from 'path';
 
 const commandIAm = async (
   username: string,
@@ -108,6 +109,32 @@ const commandGet = async (filename: string, options: object) => {
   await initConnection(deviceName, localStation);
   const result = await load(serverStation, filename, await getHandles());
   fs.writeFileSync(result.actualFilename, result.data);
+  saveFileInfo(result.actualFilename, {
+    originalFilename: result.actualFilename,
+    loadAddr: result.loadAddr,
+    execAddr: result.execAddr,
+  });
+  await driver.close();
+};
+
+const basicLoadAddr = 0xffff0e00;
+const basicExecAddr = 0xffff2b80;
+const commandPut = async (filename: string, options: object) => {
+  const { deviceName, serverStation, localStation } = await resolveOptions(
+    options,
+  );
+  await initConnection(deviceName, localStation);
+  const fileInfo = loadFileInfo(filename);
+  const fileData = fs.readFileSync(filename);
+  const fileTitle = `${path.basename(filename)}`;
+  await save(
+    serverStation,
+    fileData,
+    fileInfo?.originalFilename || fileTitle,
+    fileInfo?.loadAddr || basicLoadAddr,
+    fileInfo?.execAddr || basicExecAddr,
+    await getHandles(),
+  );
   await driver.close();
 };
 
@@ -118,10 +145,11 @@ const commandLoad = async (filename: string, options: object) => {
   );
   await initConnection(deviceName, localStation);
   const result = await load(serverStation, filename, await getHandles());
-  fs.writeFileSync(result.actualFilename, result.data);
+  const tempFile = `${result.actualFilename}.tmp`;
+  fs.writeFileSync(tempFile, result.data);
 
   try {
-    const spawnResult = spawnSync('basictool', [result.actualFilename]);
+    const spawnResult = spawnSync('basictool', [tempFile]);
     if (spawnResult.error) {
       throw spawnResult.error;
     }
@@ -134,61 +162,49 @@ const commandLoad = async (filename: string, options: object) => {
     );
   }
 
+  fs.rmSync(tempFile, { force: true });
+
   // TODO: do this stuff in wrapper
   await driver.close();
 };
 
 const commandSave = async (
   localPath: string,
-  destPath: string,
+  optionalDestPath: string | undefined,
   options: object,
 ) => {
   const { deviceName, serverStation, localStation } = await resolveOptions(
     options,
   );
   await initConnection(deviceName, localStation);
+  const localFilenameNoBasSuffix = basename(localPath).replace(/\.bas$/, '');
+  const destPath = optionalDestPath || localFilenameNoBasSuffix;
 
+  let spawnResult;
   try {
-    const spawnResult = spawnSync('basictool', ['-t', `${localPath}.bas`]);
+    spawnResult = spawnSync('basictool', ['-t', `${localPath}`]);
     if (spawnResult.error) {
       throw spawnResult.error;
     }
-
-    const fileTitle = `${path.basename(destPath)}\r`;
-    await save(
-      serverStation,
-      spawnResult.stdout,
-      fileTitle,
-      0xffff0e00,
-      0xffff2b80,
-      await getHandles(),
-    );
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'unknown error';
     console.error(
       'Failed to launch basictool utility which is required to convert tokenised BASIC' +
         `file to/from text. Is it installed and in your PATH? Error is: "${msg}"`,
     );
+    await driver.close();
+    return;
   }
 
-  await driver.close();
-};
-
-const commandPut = async (filename: string, options: object) => {
-  const { deviceName, serverStation, localStation } = await resolveOptions(
-    options,
-  );
-  await initConnection(deviceName, localStation);
-  const fileData = fs.readFileSync(filename);
-  const fileTitle = `${path.basename(filename)}\r`;
   await save(
     serverStation,
-    fileData,
-    fileTitle,
-    0xffff0e00,
-    0xffff2b80,
+    spawnResult.stdout,
+    `${destPath}`,
+    basicLoadAddr,
+    basicExecAddr,
     await getHandles(),
   );
+
   await driver.close();
 };
 
@@ -280,7 +296,7 @@ const main = () => {
     .argument('<username>', 'username')
     .argument('[password]', 'password')
     .addOption(
-      new Option('-dev, --device <string>', 'specify PICO serial device'),
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
     )
     .addOption(
       new Option(
@@ -300,7 +316,7 @@ const main = () => {
     .command('bye')
     .description('logout of fileserver like a "*BYE" command')
     .addOption(
-      new Option('-dev, --device <string>', 'specify PICO serial device'),
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
     )
     .addOption(
       new Option(
@@ -321,7 +337,7 @@ const main = () => {
     .description('change current directory')
     .argument('[dir]', 'directory path', '')
     .addOption(
-      new Option('-dev, --device <string>', 'specify PICO serial device'),
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
     )
     .addOption(
       new Option(
@@ -342,7 +358,7 @@ const main = () => {
     .description('get file from fileserver using "LOAD" command')
     .argument('<filename>', 'filename')
     .addOption(
-      new Option('-dev, --device <string>', 'specify PICO serial device'),
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
     )
     .addOption(
       new Option(
@@ -359,11 +375,32 @@ const main = () => {
     .action(errorHnd(commandGet));
 
   program
+    .command('put')
+    .description('get file from fileserver using "SAVE" command')
+    .argument('<filename>', 'filename')
+    .addOption(
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
+    )
+    .addOption(
+      new Option(
+        '-s, --station <number>',
+        'specify local Econet station number',
+      ),
+    )
+    .addOption(
+      new Option(
+        '-fs, --fileserver <number>',
+        'specify fileserver station number',
+      ).default(254),
+    )
+    .action(errorHnd(commandPut));
+
+  program
     .command('load')
     .description('load basic file and detokenise (needs basictool installed)')
     .argument('<filename>', 'filename')
     .addOption(
-      new Option('-dev, --device <string>', 'specify PICO serial device'),
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
     )
     .addOption(
       new Option(
@@ -385,9 +422,12 @@ const main = () => {
       'save basic file after detokenising (needs basictool installed)',
     )
     .argument('<localPath>', 'path to file on local filesystem')
-    .argument('<destPath>', 'path to file on fileserver')
+    .argument(
+      '[destPath]',
+      'path to file on fileserver (defaults to filename part of localPath)',
+    )
     .addOption(
-      new Option('-dev, --device <string>', 'specify PICO serial device'),
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
     )
     .addOption(
       new Option(
@@ -404,32 +444,11 @@ const main = () => {
     .action(errorHnd(commandSave));
 
   program
-    .command('put')
-    .description('get file from fileserver using "SAVE" command')
-    .argument('<filename>', 'filename')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify PICO serial device'),
-    )
-    .addOption(
-      new Option(
-        '-s, --station <number>',
-        'specify local Econet station number',
-      ),
-    )
-    .addOption(
-      new Option(
-        '-fs, --fileserver <number>',
-        'specify fileserver station number',
-      ).default(254),
-    )
-    .action(errorHnd(commandPut));
-
-  program
     .command('cat')
     .description('get catalogue of directory from fileserver')
     .argument('[dirPath]', 'directory path', '')
     .addOption(
-      new Option('-dev, --device <string>', 'specify PICO serial device'),
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
     )
     .addOption(
       new Option(
@@ -450,7 +469,7 @@ const main = () => {
     .description('create directory on fileserver')
     .argument('<dirPath>', 'directory path')
     .addOption(
-      new Option('-dev, --device <string>', 'specify PICO serial device'),
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
     )
     .addOption(
       new Option(
@@ -471,7 +490,7 @@ const main = () => {
     .description('delete file on fileserver')
     .argument('<path>', 'file path')
     .addOption(
-      new Option('-dev, --device <string>', 'specify PICO serial device'),
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
     )
     .addOption(
       new Option(
@@ -493,7 +512,7 @@ const main = () => {
     .argument('<path>', 'file path')
     .argument('<accessString>', 'access string')
     .addOption(
-      new Option('-dev, --device <string>', 'specify PICO serial device'),
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
     )
     .addOption(
       new Option(
@@ -529,7 +548,7 @@ const main = () => {
     .argument('<station>', 'station number')
     .argument('<message>', 'message')
     .addOption(
-      new Option('-dev, --device <string>', 'specify PICO serial device'),
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
     )
     .action(errorHnd(commandNotify));
 
@@ -537,7 +556,7 @@ const main = () => {
     .command('monitor')
     .description('listen for network traffic like a "*NETMON" command')
     .addOption(
-      new Option('-dev, --device <string>', 'specify PICO serial device'),
+      new Option('-dev, --device <string>', 'specify Pico serial device'),
     )
     .action(errorHnd(commandMonitor));
 

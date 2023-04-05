@@ -6,6 +6,7 @@ import {
   waitForReceiveTxEvent,
   waitForDataOrStatus,
   DirectoryHandles,
+  logProgress,
 } from '../common';
 import { driver } from '@jprayner/piconet-nodejs';
 
@@ -14,11 +15,9 @@ export const load = async (
   filename: string,
   handles: DirectoryHandles,
 ) => {
-  const loadTimeoutMs = 10000;
   const replyPort = 0x90;
   const dataPort = 0x92;
   const functionCode = 0x02;
-
   const msg = standardTxMessage(
     replyPort,
     functionCode,
@@ -37,7 +36,6 @@ export const load = async (
     fsPort,
     msg,
   );
-
   if (!txResult.success) {
     throw new Error(`Failed to send LOAD command to station ${serverStation}`);
   }
@@ -47,7 +45,6 @@ export const load = async (
     fsControlByte,
     [replyPort],
   );
-
   if (serverReply.resultCode !== 0x00) {
     const message = stripCRs(serverReply.data.toString('ascii'));
     throw new Error(`Load failed: ${message}`);
@@ -71,10 +68,9 @@ export const load = async (
     .subarray(14, 26)
     .toString('ascii')
     .trim();
-
-  const startTime = Date.now();
   let data = Buffer.from('');
-  while (Date.now() - startTime < loadTimeoutMs) {
+  let complete = false;
+  while (!complete) {
     const dataOrEndEvent = await waitForDataOrStatus(
       serverStation,
       fsControlByte,
@@ -86,13 +82,16 @@ export const load = async (
         const message = stripCRs(dataOrEndEvent.data.toString('ascii'));
         throw new Error(`Load failed during delivery: ${message}`);
       }
-      break;
+
+      complete = true;
+      continue;
     }
 
     data = Buffer.concat([data, dataOrEndEvent.data]);
-  }
 
-  // TODO: handle timeout
+    const percentComplete = Math.round(100 * (data.length / size));
+    logProgress(`Loading ${data.length}/${size} bytes [${percentComplete}%]`);
+  }
 
   return {
     loadAddr,

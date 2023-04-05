@@ -6,12 +6,15 @@ import {
   TxResultEvent,
   RxTransmitEvent,
 } from '@jprayner/piconet-nodejs';
+import { readFileSync, rmSync, writeFileSync } from 'fs';
 import {
   executeCliCommand,
   fsControlByte,
   fsPort,
   initConnection,
+  loadFileInfo,
   responseMatcher,
+  saveFileInfo,
   waitForAckEvent,
   waitForDataOrStatus,
 } from './common';
@@ -395,7 +398,7 @@ describe('common.waitForAckEvent', () => {
 
   it('should direct driver to accept valid ack events', async () => {
     const ackEvent = new RxTransmitEvent(
-      Buffer.from([1, 0, 254, 0, 0, 0, 90]),
+      Buffer.from([1, 0, 254, 0, 0, 90]),
       Buffer.from([]),
     );
     const waitForEventSpy = jest
@@ -415,7 +418,7 @@ describe('common.waitForAckEvent', () => {
 
   it('should direct driver to reject non-ack events', async () => {
     const nonAckEvent = new RxImmediateEvent(
-      Buffer.from([1, 0, 254, 0, 0, 0, 90]),
+      Buffer.from([1, 0, 254, 0, 0, 90]),
       Buffer.from([]),
     );
     const waitForEventSpy = jest
@@ -431,5 +434,78 @@ describe('common.waitForAckEvent', () => {
     await waitForAckEvent(254, 90);
     const matcher = waitForEventSpy.mock.calls[0][0];
     expect(matcher(nonAckEvent)).toBe(false);
+  });
+});
+
+describe('common.saveFileInfo', () => {
+  const tempFilename = 'tempFile';
+
+  afterEach(() => {
+    rmSync(`${tempFilename}.inf`, { force: true });
+  });
+
+  it('should save file info correctly', () => {
+    const fileInfo = {
+      originalFilename: 'testFile',
+      loadAddr: 0xffff1234,
+      execAddr: 0xffffabcd,
+    };
+
+    saveFileInfo(tempFilename, fileInfo);
+    const fileInfoLines = readFileSync(`${tempFilename}.inf`)
+      .toString('utf-8')
+      .split('\n');
+    expect(fileInfoLines.length).toBe(2);
+    expect(fileInfoLines[0]).toBe('testFile   FFFF1234 FFFFABCD');
+    expect(fileInfoLines[1]).toBe('');
+  });
+});
+
+describe('common.loadFileInfo', () => {
+  const tempFilename = 'tempFile';
+
+  afterEach(() => {
+    rmSync(`${tempFilename}.inf`, { force: true });
+  });
+
+  it('should load valid file info correctly', () => {
+    const infoBuffer = Buffer.from('testFile   FFFF1234 FFFFABCD');
+    writeFileSync(`${tempFilename}.inf`, infoBuffer);
+
+    const result = loadFileInfo(tempFilename);
+    expect(result).toBeDefined();
+    expect(result?.originalFilename).toBe('testFile');
+    expect(result?.loadAddr).toBe(0xffff1234);
+    expect(result?.execAddr).toBe(0xffffabcd);
+  });
+
+  it('should reject empty info file', () => {
+    const infoBuffer = Buffer.from('');
+    expect(writeFileSync(`${tempFilename}.inf`, infoBuffer)).toBeUndefined();
+  });
+
+  it('should reject info file with insufficient entries', () => {
+    const infoBuffer = Buffer.from('testFile   FFFF1234');
+    expect(writeFileSync(`${tempFilename}.inf`, infoBuffer)).toBeUndefined();
+  });
+
+  it('should reject info file with wrong number of hex chars in load addr', () => {
+    const infoBuffer = Buffer.from('testFile   FFFF123 FFFFABCD');
+    expect(writeFileSync(`${tempFilename}.inf`, infoBuffer)).toBeUndefined();
+  });
+
+  it('should reject info file with non-hex chars in load addr', () => {
+    const infoBuffer = Buffer.from('testFile   HELLOMUM FFFFABCD');
+    expect(writeFileSync(`${tempFilename}.inf`, infoBuffer)).toBeUndefined();
+  });
+
+  it('should reject info file with wrong number of hex chars in exec addr', () => {
+    const infoBuffer = Buffer.from('testFile   FFFF1234 FFFFABC');
+    expect(writeFileSync(`${tempFilename}.inf`, infoBuffer)).toBeUndefined();
+  });
+
+  it('should reject info file with non-hex chars in exec addr', () => {
+    const infoBuffer = Buffer.from('testFile   FFFF1234 HELLOMUM');
+    expect(writeFileSync(`${tempFilename}.inf`, infoBuffer)).toBeUndefined();
   });
 });
