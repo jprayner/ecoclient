@@ -233,9 +233,13 @@ export const loadFileInfo = (localFilename: string): FileInfo | undefined => {
 };
 
 export const logProgress = (message: string) => {
-  if (process.stdout.isTTY && process.stdout.clearLine && process.stdout.cursorTo) {
+  if (
+    process.stdout.isTTY &&
+    process.stdout.clearLine &&
+    process.stdout.cursorTo
+  ) {
     process.stdout.clearLine(0);
     process.stdout.cursorTo(0);
-    process.stdout.write(message);  
+    process.stdout.write(message);
   }
 };
