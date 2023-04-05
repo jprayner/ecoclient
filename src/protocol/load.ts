@@ -92,6 +92,7 @@ export const load = async (
     const percentComplete = Math.round(100 * (data.length / size));
     logProgress(`Loading ${data.length}/${size} bytes [${percentComplete}%]`);
   }
+  logProgress('');
 
   return {
     loadAddr,
