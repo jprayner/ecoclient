@@ -110,7 +110,7 @@ export const save = async (
     if (dataLeftToSend.length > 0) {
       await waitForAckEvent(serverStation, ackPort);
     }
-    const sentBytes = fileSize - dataToSend.length;
+    const sentBytes = fileSize - dataLeftToSend.length;
     const percentComplete = Math.round(100 * (sentBytes / fileSize));
     logProgress(`Saving ${sentBytes}/${fileSize} bytes [${percentComplete}%]`);
   }
