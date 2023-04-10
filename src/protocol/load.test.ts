@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { driver, TxResultEvent } from '@jprayner/piconet-nodejs';
+import { driver, EventQueue, RxTransmitEvent, TxResultEvent } from '@jprayner/piconet-nodejs';
 import {
   waitForReceiveTxEvent,
-  waitForDataOrStatus,
   fsControlByte,
   stripCRs,
 } from '../common';
@@ -11,11 +10,10 @@ import { load } from './load';
 jest.mock('../common');
 
 const waitForReceiveTxEventMock = jest.mocked(waitForReceiveTxEvent);
-const waitForDataOrStatusMock = jest.mocked(waitForDataOrStatus);
 const stripCRsMock = jest.mocked(stripCRs);
 
 const dataPort = 0x92;
-const statusPort = 0x90;
+const replyPort = 0x90;
 const commandCode = 0x0a;
 
 const loadAddr = 0x802bffff;
@@ -23,6 +21,28 @@ const execAddr = 0x000dffff;
 const size = 0x03;
 const access = 0xa3;
 const date = 0x464e;
+
+interface RxDataTransmitProps {
+  fsStation: number;
+  fsNet: number;
+  localStation: number;
+  localNet: number;
+  controlByte: number;
+  replyPort: number;
+  data: Buffer;
+}
+
+interface RxReplyTransmitProps {
+  fsStation: number;
+  fsNet: number;
+  localStation: number;
+  localNet: number;
+  controlByte: number;
+  replyPort: number;
+  commandCode: number;
+  resultCode: number;
+  data: Buffer;
+}
 
 describe('load protocol handler', () => {
   beforeEach(() => {
@@ -33,20 +53,55 @@ describe('load protocol handler', () => {
     setupTransmitMock();
     setupWaitForReceiveTxEventMock();
 
+    const localStation = 1;
+    const fsStation = 254;
+    const network = 0;
+    const resultCode = 0;
     const fileData = Buffer.from('ABC');
-    waitForDataOrStatusMock.mockResolvedValueOnce({
-      type: 'data',
-      data: fileData,
-    });
 
-    waitForDataOrStatusMock.mockResolvedValueOnce({
-      type: 'status',
-      controlByte: fsControlByte,
-      port: statusPort,
-      commandCode,
-      resultCode: 0,
-      data: Buffer.from([]),
-    });
+    jest
+      .spyOn(driver, 'eventQueueWait')
+      .mockImplementationOnce(
+        async (
+          queue: EventQueue,
+          timeoutMs: number,
+        ) => {
+          return Promise.resolve(
+            dummyDataRxTransmitEvent({
+              fsStation,
+              fsNet: network,
+              localStation,
+              localNet: network,
+              controlByte: fsControlByte,
+              replyPort: dataPort,
+              data: fileData,
+            }),
+          );
+        },
+      );
+
+    jest
+      .spyOn(driver, 'eventQueueWait')
+      .mockImplementationOnce(
+        async (
+          queue: EventQueue,
+          timeoutMs: number,
+        ) => {
+          return Promise.resolve(
+            dummyReplyRxTransmitEvent({
+              fsStation,
+              fsNet: network,
+              localStation,
+              localNet: network,
+              controlByte: fsControlByte,
+              replyPort,
+              commandCode: 0,
+              resultCode,
+              data: Buffer.from([]),
+            }),
+          );
+        },
+      );
 
     const result = await load(254, 'FNAME', {
       userRoot: 0,
@@ -137,18 +192,37 @@ describe('load protocol handler', () => {
     setupTransmitMock();
     setupWaitForReceiveTxEventMock();
 
-    waitForDataOrStatusMock.mockResolvedValueOnce({
-      type: 'status',
-      controlByte: fsControlByte,
-      port: statusPort,
-      commandCode,
-      resultCode: 1,
-      data: Buffer.from('Oh dear, oh dear\r'),
-    });
+    const localStation = 1;
+    const fsStation = 254;
+    const network = 0;
+    const resultCode = 1;
+
+    jest
+      .spyOn(driver, 'eventQueueWait')
+      .mockImplementationOnce(
+        async (
+          queue: EventQueue,
+          timeoutMs: number,
+        ) => {
+          return Promise.resolve(
+            dummyReplyRxTransmitEvent({
+              fsStation,
+              fsNet: network,
+              localStation,
+              localNet: network,
+              controlByte: fsControlByte,
+              replyPort,
+              commandCode: 0,
+              resultCode,
+              data: Buffer.from('Oh dear, oh dear\r'),
+            }),
+          );
+        },
+      );
 
     await expect(
       load(254, 'FNAME', { userRoot: 0, current: 1, library: 2 }),
-    ).rejects.toThrowError('Load failed during delivery: Oh dear, oh dear');
+    ).rejects.toThrowError('Load failed: Oh dear, oh dear');
   });
 });
 
@@ -190,4 +264,56 @@ const setupWaitForReceiveTxEventMock = () => {
       });
     },
   );
+};
+
+const dummyReplyRxTransmitEvent = (props: RxReplyTransmitProps): RxTransmitEvent => {
+  const scoutFrame = Buffer.from([
+    props.localStation,
+    props.localNet,
+    props.fsStation,
+    props.fsNet,
+    props.controlByte,
+    props.replyPort,
+  ]);
+
+  const dataFrameHeader = Buffer.from([
+    props.localStation,
+    props.localNet,
+    props.fsStation,
+    props.fsNet,
+    props.commandCode,
+    props.resultCode,
+  ]);
+  const dataFrame = Buffer.concat([dataFrameHeader, props.data]);
+
+  const result = new RxTransmitEvent(
+    scoutFrame,
+    dataFrame,
+  );
+  return result;
+};
+
+const dummyDataRxTransmitEvent = (props: RxDataTransmitProps): RxTransmitEvent => {
+  const scoutFrame = Buffer.from([
+    props.localStation,
+    props.localNet,
+    props.fsStation,
+    props.fsNet,
+    props.controlByte,
+    props.replyPort,
+  ]);
+
+  const dataFrameHeader = Buffer.from([
+    props.localStation,
+    props.localNet,
+    props.fsStation,
+    props.fsNet,
+  ]);
+  const dataFrame = Buffer.concat([dataFrameHeader, props.data]);
+
+  const result = new RxTransmitEvent(
+    scoutFrame,
+    dataFrame,
+  );
+  return result;
 };

@@ -67,11 +67,11 @@
     "typescript": "^4.9.5"
   },
   "dependencies": {
-    "@jprayner/piconet-nodejs": "^1.0.8",
+    "@jprayner/piconet-nodejs": "^1.0.16",
     "commander": "^10.0.0"
   },
   "engines": {
-    "node": "14",
+    "node": ">=14",
     "npm": ">=6"
   },
   "standard": {

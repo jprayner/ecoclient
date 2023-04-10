@@ -4,11 +4,11 @@ import {
   standardTxMessage,
   stripCRs,
   waitForReceiveTxEvent,
-  waitForDataOrStatus,
   DirectoryHandles,
   logProgress,
+  responseMatcher,
 } from '../common';
-import { driver } from '@jprayner/piconet-nodejs';
+import { driver, RxTransmitEvent } from '@jprayner/piconet-nodejs';
 
 export const load = async (
   serverStation: number,
@@ -68,26 +68,45 @@ export const load = async (
     .subarray(14, 26)
     .toString('ascii')
     .trim();
+
+  const queue = driver.eventQueueCreate(responseMatcher(serverStation, 0, fsControlByte, [dataPort, replyPort]));
+
   let data = Buffer.from('');
   let complete = false;
   while (!complete) {
-    const dataOrEndEvent = await waitForDataOrStatus(
-      serverStation,
-      fsControlByte,
-      dataPort,
-      replyPort,
-    );
-    if (dataOrEndEvent.port === replyPort) {
-      if (dataOrEndEvent.resultCode !== 0x00) {
-        const message = stripCRs(dataOrEndEvent.data.toString('ascii'));
-        throw new Error(`Load failed during delivery: ${message}`);
-      }
+    const rxTransmitEvent = await driver.eventQueueWait(queue, 2000);
 
-      complete = true;
-      continue;
+    if (!(rxTransmitEvent instanceof RxTransmitEvent) || rxTransmitEvent.scoutFrame.length < 6) {
+      throw new Error(`Unexpected response from station ${serverStation}`);
     }
 
-    data = Buffer.concat([data, dataOrEndEvent.data]);
+    const port = rxTransmitEvent.scoutFrame[5];
+    switch (port) {
+      case replyPort: {
+        if (rxTransmitEvent.dataFrame.length < 6) {
+          throw new Error(`Malformed response from station ${serverStation}`);
+        }
+
+        const resultCode = rxTransmitEvent.dataFrame[5];
+        const messageData = rxTransmitEvent.dataFrame.slice(6);
+
+        if (resultCode !== 0x00) {
+          const message = stripCRs(messageData.toString('ascii'));
+          throw new Error(`Load failed: ${message}`);
+        }
+
+        complete = true;
+        break;
+      }
+
+      case dataPort:
+        if (rxTransmitEvent.dataFrame.length < 4) {
+          throw new Error(`Malformed response from station ${serverStation}`);
+        }
+
+        data = Buffer.concat([data, rxTransmitEvent.dataFrame.slice(4)]);
+        break;
+    }
 
     const percentComplete = Math.round(100 * (data.length / size));
     logProgress(`Loading ${data.length}/${size} bytes [${percentComplete}%]`);

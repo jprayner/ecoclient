@@ -112,44 +112,6 @@ export const waitForReceiveTxEvent = async (
   };
 };
 
-export const waitForDataOrStatus = async (
-  serverStation: number,
-  controlByte: number,
-  dataPort: number,
-  statusPort: number,
-) => {
-  const rxTransmitEvent = await driver.waitForEvent(
-    responseMatcher(serverStation, 0, controlByte, [dataPort, statusPort]),
-    2000,
-  );
-  if (!(rxTransmitEvent instanceof RxTransmitEvent)) {
-    throw new Error(`Unexpected response from station ${serverStation}`);
-  }
-  if (rxTransmitEvent.scoutFrame[5] === statusPort) {
-    if (rxTransmitEvent.dataFrame.length < 6) {
-      throw new Error(`Malformed response from station ${serverStation}`);
-    }
-
-    return {
-      type: 'status',
-      controlByte: rxTransmitEvent.scoutFrame[4],
-      port: rxTransmitEvent.scoutFrame[5],
-      commandCode: rxTransmitEvent.dataFrame[4],
-      resultCode: rxTransmitEvent.dataFrame[5],
-      data: rxTransmitEvent.dataFrame.slice(6),
-    };
-  } else {
-    if (rxTransmitEvent.dataFrame.length < 2) {
-      throw new Error(`Malformed response from station ${serverStation}`);
-    }
-
-    return {
-      type: 'data',
-      data: rxTransmitEvent.dataFrame.slice(4),
-    };
-  }
-};
-
 export const executeCliCommand = async (
   serverStation: number,
   command: string,
