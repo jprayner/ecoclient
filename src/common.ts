@@ -74,19 +74,6 @@ export const initConnection = async (
   await driver.setMode('LISTEN');
 };
 
-export const waitForAckEvent = async (serverStation: number, port: number) => {
-  const ackTimeoutMs = 10000;
-  return driver.waitForEvent((event: EconetEvent) => {
-    const result =
-      event instanceof RxTransmitEvent &&
-      event.scoutFrame.length >= 6 &&
-      event.scoutFrame[2] === serverStation &&
-      event.scoutFrame[3] === 0 &&
-      event.scoutFrame[5] === port;
-    return result;
-  }, ackTimeoutMs);
-};
-
 export const waitForReceiveTxEvent = async (
   serverStation: number,
   controlByte: number,

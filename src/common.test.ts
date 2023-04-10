@@ -15,7 +15,6 @@ import {
   loadFileInfo,
   responseMatcher,
   saveFileInfo,
-  waitForAckEvent,
 } from './common';
 
 interface RxTransmitProps {
@@ -230,52 +229,6 @@ describe('common.responseMatcher', () => {
       ),
     );
     expect(result).toBe(false);
-  });
-});
-
-describe('common.waitForAckEvent', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('should direct driver to accept valid ack events', async () => {
-    const ackEvent = new RxTransmitEvent(
-      Buffer.from([1, 0, 254, 0, 0, 90]),
-      Buffer.from([]),
-    );
-    const waitForEventSpy = jest
-      .spyOn(driver, 'waitForEvent')
-      .mockImplementation(
-        async (
-          callback: (event: EconetEvent) => boolean,
-          timeoutMs: number,
-        ) => {
-          return Promise.resolve(ackEvent);
-        },
-      );
-    await waitForAckEvent(254, 90);
-    const matcher = waitForEventSpy.mock.calls[0][0];
-    expect(matcher(ackEvent)).toBe(true);
-  });
-
-  it('should direct driver to reject non-ack events', async () => {
-    const nonAckEvent = new RxImmediateEvent(
-      Buffer.from([1, 0, 254, 0, 0, 90]),
-      Buffer.from([]),
-    );
-    const waitForEventSpy = jest
-      .spyOn(driver, 'waitForEvent')
-      .mockImplementation(
-        async (
-          callback: (event: EconetEvent) => boolean,
-          timeoutMs: number,
-        ) => {
-          return Promise.resolve(nonAckEvent);
-        },
-      );
-    await waitForAckEvent(254, 90);
-    const matcher = waitForEventSpy.mock.calls[0][0];
-    expect(matcher(nonAckEvent)).toBe(false);
   });
 });
 

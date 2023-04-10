@@ -45,12 +45,13 @@ export const load = async (
     fsControlByte,
     [replyPort],
   );
+
   if (serverReply.resultCode !== 0x00) {
     const message = stripCRs(serverReply.data.toString('ascii'));
     throw new Error(`Load failed: ${message}`);
   }
 
-  if (serverReply.data.length < 26) {
+  if (serverReply.data.length < 20) {
     throw new Error(
       `Malformed response in LOAD from station ${serverStation}: success but not enough data`,
     );
@@ -64,10 +65,9 @@ export const load = async (
     (serverReply.data[10] << 16);
   const access = serverReply.data[11];
   const date = serverReply.data.readUint16LE(12);
-  const actualFilename = serverReply.data
-    .subarray(14, 26)
-    .toString('ascii')
-    .trim();
+  const actualFilename = parseAsciiString(
+    serverReply.data.subarray(14, 26),
+  ).trim();
 
   const queue = driver.eventQueueCreate(
     responseMatcher(serverStation, 0, fsControlByte, [dataPort, replyPort]),
@@ -113,6 +113,8 @@ export const load = async (
         break;
     }
 
+    // TODO: Destory queue.
+
     const percentComplete = Math.round(100 * (data.length / size));
     logProgress(`Loading ${data.length}/${size} bytes [${percentComplete}%]`);
   }
@@ -128,4 +130,21 @@ export const load = async (
     actualSize: data.length,
     data,
   };
+};
+
+const parseAsciiString = (buffer: Buffer) => {
+  const str = buffer.toString('ascii');
+  for (let idx = 0; idx < str.length; idx++) {
+    if (
+      str.charCodeAt(idx) >= 128 ||
+      str.charCodeAt(idx) == 0x0d ||
+      str.charCodeAt(idx) == 0x00
+    ) {
+      return str.substring(0, idx);
+    } else if (idx === str.length - 1) {
+      return str;
+    }
+  }
+
+  throw new Error('Failed to parse ASCII string');
 };

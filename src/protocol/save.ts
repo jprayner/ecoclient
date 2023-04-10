@@ -6,7 +6,6 @@ import {
   responseMatcher,
   standardTxMessage,
   stripCRs,
-  waitForAckEvent,
   waitForReceiveTxEvent,
 } from '../common';
 import { driver, RxTransmitEvent } from '@jprayner/piconet-nodejs';
@@ -89,6 +88,10 @@ export const save = async (
     );
   }
 
+  const ackQueue = driver.eventQueueCreate(
+    responseMatcher(serverStation, 0, fsControlByte, [ackPort]),
+  );
+
   const dataPort = serverReply.data[0];
   const blockSize = serverReply.data.readUInt16LE(1);
   let dataLeftToSend = Buffer.from(fileData);
@@ -108,7 +111,7 @@ export const save = async (
     }
 
     if (dataLeftToSend.length > 0) {
-      await waitForAckEvent(serverStation, ackPort);
+      await driver.eventQueueWait(ackQueue, 2000);
     }
     const sentBytes = fileSize - dataLeftToSend.length;
     const percentComplete = Math.round(100 * (sentBytes / fileSize));
@@ -116,6 +119,7 @@ export const save = async (
   }
   logProgress('');
 
+  // TODO: should use queue for save status? Destroy queue.
   const finalReply = await waitForSaveStatus(
     serverStation,
     fsControlByte,
