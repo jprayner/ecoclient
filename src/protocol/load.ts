@@ -69,14 +69,19 @@ export const load = async (
     .toString('ascii')
     .trim();
 
-  const queue = driver.eventQueueCreate(responseMatcher(serverStation, 0, fsControlByte, [dataPort, replyPort]));
+  const queue = driver.eventQueueCreate(
+    responseMatcher(serverStation, 0, fsControlByte, [dataPort, replyPort]),
+  );
 
   let data = Buffer.from('');
   let complete = false;
   while (!complete) {
     const rxTransmitEvent = await driver.eventQueueWait(queue, 2000);
 
-    if (!(rxTransmitEvent instanceof RxTransmitEvent) || rxTransmitEvent.scoutFrame.length < 6) {
+    if (
+      !(rxTransmitEvent instanceof RxTransmitEvent) ||
+      rxTransmitEvent.scoutFrame.length < 6
+    ) {
       throw new Error(`Unexpected response from station ${serverStation}`);
     }
 

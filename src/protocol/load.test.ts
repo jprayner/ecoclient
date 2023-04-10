@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { driver, EventQueue, RxTransmitEvent, TxResultEvent } from '@jprayner/piconet-nodejs';
 import {
-  waitForReceiveTxEvent,
-  fsControlByte,
-  stripCRs,
-} from '../common';
+  driver,
+  EventQueue,
+  RxTransmitEvent,
+  TxResultEvent,
+} from '@jprayner/piconet-nodejs';
+import { waitForReceiveTxEvent, fsControlByte, stripCRs } from '../common';
 import { load } from './load';
 
 jest.mock('../common');
@@ -61,47 +62,37 @@ describe('load protocol handler', () => {
 
     jest
       .spyOn(driver, 'eventQueueWait')
-      .mockImplementationOnce(
-        async (
-          queue: EventQueue,
-          timeoutMs: number,
-        ) => {
-          return Promise.resolve(
-            dummyDataRxTransmitEvent({
-              fsStation,
-              fsNet: network,
-              localStation,
-              localNet: network,
-              controlByte: fsControlByte,
-              replyPort: dataPort,
-              data: fileData,
-            }),
-          );
-        },
-      );
+      .mockImplementationOnce(async (queue: EventQueue, timeoutMs: number) => {
+        return Promise.resolve(
+          dummyDataRxTransmitEvent({
+            fsStation,
+            fsNet: network,
+            localStation,
+            localNet: network,
+            controlByte: fsControlByte,
+            replyPort: dataPort,
+            data: fileData,
+          }),
+        );
+      });
 
     jest
       .spyOn(driver, 'eventQueueWait')
-      .mockImplementationOnce(
-        async (
-          queue: EventQueue,
-          timeoutMs: number,
-        ) => {
-          return Promise.resolve(
-            dummyReplyRxTransmitEvent({
-              fsStation,
-              fsNet: network,
-              localStation,
-              localNet: network,
-              controlByte: fsControlByte,
-              replyPort,
-              commandCode: 0,
-              resultCode,
-              data: Buffer.from([]),
-            }),
-          );
-        },
-      );
+      .mockImplementationOnce(async (queue: EventQueue, timeoutMs: number) => {
+        return Promise.resolve(
+          dummyReplyRxTransmitEvent({
+            fsStation,
+            fsNet: network,
+            localStation,
+            localNet: network,
+            controlByte: fsControlByte,
+            replyPort,
+            commandCode: 0,
+            resultCode,
+            data: Buffer.from([]),
+          }),
+        );
+      });
 
     const result = await load(254, 'FNAME', {
       userRoot: 0,
@@ -199,26 +190,21 @@ describe('load protocol handler', () => {
 
     jest
       .spyOn(driver, 'eventQueueWait')
-      .mockImplementationOnce(
-        async (
-          queue: EventQueue,
-          timeoutMs: number,
-        ) => {
-          return Promise.resolve(
-            dummyReplyRxTransmitEvent({
-              fsStation,
-              fsNet: network,
-              localStation,
-              localNet: network,
-              controlByte: fsControlByte,
-              replyPort,
-              commandCode: 0,
-              resultCode,
-              data: Buffer.from('Oh dear, oh dear\r'),
-            }),
-          );
-        },
-      );
+      .mockImplementationOnce(async (queue: EventQueue, timeoutMs: number) => {
+        return Promise.resolve(
+          dummyReplyRxTransmitEvent({
+            fsStation,
+            fsNet: network,
+            localStation,
+            localNet: network,
+            controlByte: fsControlByte,
+            replyPort,
+            commandCode: 0,
+            resultCode,
+            data: Buffer.from('Oh dear, oh dear\r'),
+          }),
+        );
+      });
 
     await expect(
       load(254, 'FNAME', { userRoot: 0, current: 1, library: 2 }),
@@ -266,7 +252,9 @@ const setupWaitForReceiveTxEventMock = () => {
   );
 };
 
-const dummyReplyRxTransmitEvent = (props: RxReplyTransmitProps): RxTransmitEvent => {
+const dummyReplyRxTransmitEvent = (
+  props: RxReplyTransmitProps,
+): RxTransmitEvent => {
   const scoutFrame = Buffer.from([
     props.localStation,
     props.localNet,
@@ -286,14 +274,13 @@ const dummyReplyRxTransmitEvent = (props: RxReplyTransmitProps): RxTransmitEvent
   ]);
   const dataFrame = Buffer.concat([dataFrameHeader, props.data]);
 
-  const result = new RxTransmitEvent(
-    scoutFrame,
-    dataFrame,
-  );
+  const result = new RxTransmitEvent(scoutFrame, dataFrame);
   return result;
 };
 
-const dummyDataRxTransmitEvent = (props: RxDataTransmitProps): RxTransmitEvent => {
+const dummyDataRxTransmitEvent = (
+  props: RxDataTransmitProps,
+): RxTransmitEvent => {
   const scoutFrame = Buffer.from([
     props.localStation,
     props.localNet,
@@ -311,9 +298,6 @@ const dummyDataRxTransmitEvent = (props: RxDataTransmitProps): RxTransmitEvent =
   ]);
   const dataFrame = Buffer.concat([dataFrameHeader, props.data]);
 
-  const result = new RxTransmitEvent(
-    scoutFrame,
-    dataFrame,
-  );
+  const result = new RxTransmitEvent(scoutFrame, dataFrame);
   return result;
 };
