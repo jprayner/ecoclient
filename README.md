@@ -158,32 +158,16 @@ ecoclient load Menu
 ecoclient get $.Games.Menu
 ```
 
-## save [filename]
+## save [localPath] [destPath]
 
-Utilises `basictool` to tokenize the specified plain-text BASIC file on the local filesystem and uploads the result to the server with the same name (minus any `.bas` file extension).
-
-Assumes `basictool` is on the local machine's PATH.
-
-| Argument | Description |
-|----------|-------------|
-| filename  | Name of local file. |
-
-Exmaples:
-
-```
-ecoclient save Menu
-ecoclient save $.Games.Menu
-```
-
-## save [filename]
-
-Utilises `basictool` to tokenize the specified plain-text BASIC file on the local filesystem and uploads the result to the server with the same name (minus any `.bas` file extension).
+Utilises `basictool` to tokenize the specified plain-text BASIC file on the local filesystem and uploads the result to the server.
 
 Assumes `basictool` is on the local machine's PATH.
 
 | Argument | Description |
 |----------|-------------|
-| filename  | Name of local file. |
+| localPath  | Path to local file. |
+| [optional] destPath  | Path to remote file. If ommitted, taken from filename in local `.inf` file |
 
 Exmaples:
 
