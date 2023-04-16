@@ -87,10 +87,10 @@ const commandMonitor = async () => {
       console.error(`ERROR: ${event.description}`);
       return;
     }
-    
+
     if (event instanceof RxDataEvent) {
       console.log(event.toString());
-    }  
+    }
   }
 };
 

@@ -27,8 +27,8 @@ ecoclient set-station 32    # an unassigned station number on you local Econet n
 
 Sets the fileserver station number. Defaults to 254.
 
-| Argument | Description |
-|----------|-------------|
+| Argument | Description                              |
+| -------- | ---------------------------------------- |
 | station  | Fileserver station number in range 1-254 |
 
 Exmaple:
@@ -36,13 +36,13 @@ Exmaple:
 ```
 ecoclient set-fs 1
 ```
-  
+
 ## set-station [station]
-  
+
 Sets the local station number. Must be configured before using other commands (except `setXXX` and `monitor`).
 
-| Argument | Description |
-|----------|-------------|
+| Argument | Description                         |
+| -------- | ----------------------------------- |
 | station  | Local station number in range 1-254 |
 
 Exmaple:
@@ -55,9 +55,9 @@ ecoclient set-station 32
 
 Sends a notification message to a station like a `*NOTIFY` command.
 
-| Argument | Description |
-|----------|-------------|
-| station  | Station number to send a message to in range 1-254 |
+| Argument | Description                                                     |
+| -------- | --------------------------------------------------------------- |
+| station  | Station number to send a message to in range 1-254              |
 | message  | The text of the message (may include a \r to execute a command) |
 
 ## monitor
@@ -71,13 +71,13 @@ ecoclient monitor
 ```
 
 ## i-am [username] [password]
-  
+
 Login to fileserver like a `*I AM` command. Directory handles (e.g. current directory) are persisted such that they take effect with other commands like `dir`.
 
-| Argument | Description |
-|----------|-------------|
-| username  | Username registered known to the fileserver |
-| password  | Password which corresponds to `username` |
+| Argument | Description                                 |
+| -------- | ------------------------------------------- |
+| username | Username registered known to the fileserver |
+| password | Password which corresponds to `username`    |
 
 Exmaple:
 
@@ -99,9 +99,9 @@ ecoclient bye
 
 Change current directory on fileserver like a `*DIR` command. Directory handles are persisted such that they take effect with subsequent commands like `get`, `put`, `load`, `save` or `dir`.
 
-| Argument | Description |
-|----------|-------------|
-| dir  | New directory on fileserver. May be relative to current directory, prefixed with `$.` to change to a directory relative to the root etc. Omit to change to home directory. |
+| Argument | Description                                                                                                                                                                |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| dir      | New directory on fileserver. May be relative to current directory, prefixed with `$.` to change to a directory relative to the root etc. Omit to change to home directory. |
 
 Exmaples:
 
@@ -110,14 +110,13 @@ ecoclient dir $.Library
 ecoclient dir subdir
 ```
 
- 
 ## get [filename]
 
 Download the specified file to the current directory of the local host. Creates a `.inf` file containing the load and execution addresses so that these are preserved when uploading e.g. with a `put` command.
 
-| Argument | Description |
-|----------|-------------|
-| filename  | Name of remote file. May be relative to current directory or prefixed with `$.` if relative to the root directory. |
+| Argument | Description                                                                                                        |
+| -------- | ------------------------------------------------------------------------------------------------------------------ |
+| filename | Name of remote file. May be relative to current directory or prefixed with `$.` if relative to the root directory. |
 
 Exmaples:
 
@@ -130,9 +129,9 @@ ecoclient get $.Games.MyFile
 
 Upload the specified file from the host machine to the current directory on the server. Observes any corresponding `.inf` file, setting the load and execution addresses accordingly.
 
-| Argument | Description |
-|----------|-------------|
-| filename  | Name of local file. |
+| Argument | Description         |
+| -------- | ------------------- |
+| filename | Name of local file. |
 
 Exmaples:
 
@@ -147,9 +146,9 @@ Download the specified BASIC file from the server, use `basictool` to de-tokenis
 
 Assumes `basictool` is on the local machine's PATH.
 
-| Argument | Description |
-|----------|-------------|
-| filename  | Name of remote file. May be relative to current directory or prefixed with `$.` if relative to the root directory. |
+| Argument | Description                                                                                                        |
+| -------- | ------------------------------------------------------------------------------------------------------------------ |
+| filename | Name of remote file. May be relative to current directory or prefixed with `$.` if relative to the root directory. |
 
 Exmaples:
 
@@ -164,10 +163,10 @@ Utilises `basictool` to tokenize the specified plain-text BASIC file on the loca
 
 Assumes `basictool` is on the local machine's PATH.
 
-| Argument | Description |
-|----------|-------------|
-| localPath  | Path to local file. |
-| [optional] destPath  | Path to remote file. If ommitted, taken from filename in local `.inf` file |
+| Argument            | Description                                                                |
+| ------------------- | -------------------------------------------------------------------------- |
+| localPath           | Path to local file.                                                        |
+| [optional] destPath | Path to remote file. If ommitted, taken from filename in local `.inf` file |
 
 Exmaples:
 
@@ -180,9 +179,9 @@ ecoclient save $.Games.Menu
 
 Provides a file listing for the specified directory.
 
-| Argument | Description |
-|----------|-------------|
-| [optional] dirPath  | Directory path: may be relative to the current directory or prefixed with `$.` to list a directory relative to the fileserver root. If ommitted, lists the current directory. |
+| Argument           | Description                                                                                                                                                                   |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [optional] dirPath | Directory path: may be relative to the current directory or prefixed with `$.` to list a directory relative to the fileserver root. If ommitted, lists the current directory. |
 
 Exmaples:
 
@@ -191,13 +190,12 @@ ecoclient cat Subdir
 ecoclient cat $.Games
 ```
 
-
 ## cdir [dirPath]
 
 Creates a directory.
 
-| Argument | Description |
-|----------|-------------|
+| Argument | Description                                                                                                                           |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | dirPath  | Directory path: may be relative to the current directory or prefixed with `$.` to create a directory relative to the fileserver root. |
 
 Exmaples:
@@ -211,8 +209,8 @@ ecoclient cdir $.Subdir
 
 Deletes a file or directory.
 
-| Argument | Description |
-|----------|-------------|
+| Argument | Description                                                                                                                                   |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | path     | File or directory path: may be relative to the current directory or prefixed with `$.` to delete a directory relative to the fileserver root. |
 
 Exmaples:
@@ -226,10 +224,10 @@ ecoclient delete $.Games.MyFile
 
 Set access rights for a file on the fileserver.
 
-| Argument     | Description |
-|--------------|-------------|
+| Argument     | Description                                                                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | path         | File or directory path: may be relative to the current directory or prefixed with `$.` to delete a directory relative to the fileserver root. |
-| accessString | An Econet access string e.g. `WR/R` |
+| accessString | An Econet access string e.g. `WR/R`                                                                                                           |
 
 Exmaples:
 
