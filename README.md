@@ -10,6 +10,7 @@ Command-line utility for performing Econet operations from a PC (Windows, Mac or
 
 The following are required to use ecoclient:
 
+- A (Piconet board)[https://github.com/jprayner/piconet]
 - Node v.14+
 - NPM v.6+
 
