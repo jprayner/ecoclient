@@ -97,7 +97,7 @@ ecoclient bye
 
 ## dir [directory]
 
-Change current directory on fileserver like a `*DIR` command. Directory handles are persisted such that they take effect with other commands like `dir`.
+Change current directory on fileserver like a `*DIR` command. Directory handles are persisted such that they take effect with subsequent commands like `get`, `put`, `load`, `save` or `dir`.
 
 | Argument | Description |
 |----------|-------------|
@@ -182,7 +182,7 @@ Provides a file listing for the specified directory.
 
 | Argument | Description |
 |----------|-------------|
-| dirPath  | Directory path: may be relative to the current directory or prefixed with `$.` to list a directory relative to the fileserver root. If ommitted, lists the current directory. |
+| [optional] dirPath  | Directory path: may be relative to the current directory or prefixed with `$.` to list a directory relative to the fileserver root. If ommitted, lists the current directory. |
 
 Exmaples:
 
@@ -219,15 +219,18 @@ Exmaples:
 
 ```
 ecoclient delete MyFile
-ecoclient cdir $.Games.MyFile
+ecoclient delete $.Games.MyFile
 ```
 
 ## access [path] [accessString]
+
+Set access rights for a file on the fileserver.
 
 | Argument     | Description |
 |--------------|-------------|
 | path         | File or directory path: may be relative to the current directory or prefixed with `$.` to delete a directory relative to the fileserver root. |
 | accessString | An Econet access string e.g. `WR/R` |
+
 Exmaples:
 
 ```
