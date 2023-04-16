@@ -112,13 +112,12 @@ export const load = async (
         data = Buffer.concat([data, rxTransmitEvent.dataFrame.slice(4)]);
         break;
     }
-
-    // TODO: Destory queue.
-
     const percentComplete = Math.round(100 * (data.length / size));
     logProgress(`Loading ${data.length}/${size} bytes [${percentComplete}%]`);
   }
+
   logProgress('');
+  driver.eventQueueDestroy(queue);
 
   return {
     loadAddr,

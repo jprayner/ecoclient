@@ -3,9 +3,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { driver, ErrorEvent, RxDataEvent } from '@jprayner/piconet-nodejs';
+import {
+  driver,
+  EconetEvent,
+  ErrorEvent,
+  RxDataEvent,
+} from '@jprayner/piconet-nodejs';
 import { Command, CommandOptions, Option } from 'commander';
-import { initConnection, loadFileInfo, saveFileInfo } from './common';
+import { initConnection, loadFileInfo, saveFileInfo, sleepMs } from './common';
 import { load } from './protocol/load';
 import { save } from './protocol/save';
 import { readDirAccessObjectInfo } from './protocol/objectInfo';
@@ -57,27 +62,36 @@ const commandNotify = async (
 };
 
 const commandMonitor = async () => {
-  driver.addListener(event => {
-    if (event instanceof ErrorEvent) {
-      console.error(`ERROR: ${event.description}`);
-      return;
-    } else if (event instanceof RxDataEvent) {
-      console.log(event.toString());
-    }
-  });
+  const queue = driver.eventQueueCreate(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (event: EconetEvent) => true,
+  );
 
   await driver.setMode('MONITOR');
 
+  let complete = false;
+
   process.on('SIGINT', () => {
-    driver
-      .close()
-      .then(() => {
-        process.exit();
-      })
-      .catch((err: Error) => {
-        console.error(err.toString());
-      });
+    complete = true;
   });
+
+  while (!complete) {
+    const event = driver.eventQueueShift(queue);
+
+    if (typeof event === 'undefined') {
+      await sleepMs(10);
+      continue;
+    }
+
+    if (event instanceof ErrorEvent) {
+      console.error(`ERROR: ${event.description}`);
+      return;
+    }
+    
+    if (event instanceof RxDataEvent) {
+      console.log(event.toString());
+    }  
+  }
 };
 
 const commandIAm = async (

@@ -192,3 +192,7 @@ export const logProgress = (message: string) => {
     process.stdout.write(message);
   }
 };
+
+export const sleepMs = (ms: number) => {
+  return new Promise(resolve => setTimeout(resolve, ms));
+};
