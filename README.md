@@ -10,7 +10,7 @@ Command-line utility for performing Econet operations from a PC (Windows, Mac or
 
 The following are required to use ecoclient:
 
-- A (Piconet board)[https://github.com/jprayner/piconet]
+- A [Piconet board](https://github.com/jprayner/piconet)
 - Node v.14+
 - NPM v.6+
 
@@ -21,6 +21,14 @@ npm install -g @jprayner/ecoclient
 ecoclient set-fs 1          # required if your fileserver is not 254
 ecoclient set-station 32    # an unassigned station number on you local Econet network
 ```
+
+## State of development
+
+This project is still under development. Currently:
+
+- Most fileserver testing has been against a Level 3 (BBC) fileserver although a Level 4 fileserver (Archimedes) has also been used.
+- Most host OS testing has been performed on a Mac, although Linux and Windows have also been tried successfully.
+- More fileserver commands to be supported soon e.g. `SDISC`, `PASS` etc.
 
 ## Commands
 
