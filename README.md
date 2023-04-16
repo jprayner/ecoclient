@@ -4,7 +4,7 @@ Command-line utility for performing Econet operations from a PC (Windows, Mac or
 
 ## Demo
 
-https://user-images.githubusercontent.com/909745/232258349-4265b6ee-eec4-48df-9a95-ce5fbe2d8006.mp4
+![output](https://user-images.githubusercontent.com/909745/232258909-0cf166fe-fd94-4ec6-869f-3f87402a9f1e.gif)
 
 ## Prerequisites
 
@@ -23,7 +23,7 @@ ecoclient set-station 32    # an unassigned station number on you local Econet n
 
 ## Commands
 
-### set-fs <station>
+### set-fs [station]
 
 Sets the fileserver station number. Defaults to 254.
 
@@ -37,7 +37,7 @@ Exmaple:
 ecoclient set-fs 1
 ```
   
-## set-station <station>
+## set-station [station]
   
 Sets the local station number. Must be configured before using other commands (except `setXXX` and `monitor`).
 
@@ -51,7 +51,7 @@ Exmaple:
 ecoclient set-station 32
 ```
 
-## notify <station> <message>
+## notify [station] [message]
 
 Sends a notification message to a station like a `*NOTIFY` command.
 
@@ -70,7 +70,7 @@ Exmaple:
 ecoclient monitor
 ```
 
-## i-am <username> [password]
+## i-am [username] [password]
   
 Login to fileserver like a `*I AM` command. Directory handles (e.g. current directory) are persisted such that they take effect with other commands like `dir`.
 
@@ -94,16 +94,159 @@ Exmaple:
 ```
 ecoclient bye
 ```
-  
-  
-  bye [options]                           logout of fileserver like a "*BYE" command
-  dir [options] [dir]                     change current directory
-  get [options] <filename>                get file from fileserver using "LOAD" command
-  put [options] <filename>                get file from fileserver using "SAVE" command
-  load [options] <filename>               load basic file and detokenise (needs basictool installed)
-  save [options] <localPath> [destPath]   save basic file after detokenising (needs basictool
-                                          installed)
-  cat [options] [dirPath]                 get catalogue of directory from fileserver
-  cdir [options] <dirPath>                create directory on fileserver
-  delete [options] <path>                 delete file on fileserver
-  access [options] <path> <accessString>  set access on fileserver
+
+## dir [directory]
+
+Change current directory on fileserver like a `*DIR` command. Directory handles are persisted such that they take effect with other commands like `dir`.
+
+| Argument | Description |
+|----------|-------------|
+| dir  | New directory on fileserver. May be relative to current directory, prefixed with `$.` to change to a directory relative to the root etc. Omit to change to home directory. |
+
+Exmaples:
+
+```
+ecoclient dir $.Library
+ecoclient dir subdir
+```
+
+ 
+## get [filename]
+
+Download the specified file to the current directory of the local host. Creates a `.inf` file containing the load and execution addresses so that these are preserved when uploading e.g. with a `put` command.
+
+| Argument | Description |
+|----------|-------------|
+| filename  | Name of remote file. May be relative to current directory or prefixed with `$.` if relative to the root directory. |
+
+Exmaples:
+
+```
+ecoclient get MyFile
+ecoclient get $.Games.MyFile
+```
+
+## put [filename]
+
+Upload the specified file from the host machine to the current directory on the server. Observes any corresponding `.inf` file, setting the load and execution addresses accordingly.
+
+| Argument | Description |
+|----------|-------------|
+| filename  | Name of local file. |
+
+Exmaples:
+
+```
+ecoclient put MyFile
+ecoclient put $.Games.MyFile
+```
+
+## load [filename]
+
+Download the specified BASIC file from the server, use `basictool` to de-tokenise it and write it to a file on the local filesystem naned as `${filename}.bas`.
+
+Assumes `basictool` is on the local machine's PATH.
+
+| Argument | Description |
+|----------|-------------|
+| filename  | Name of remote file. May be relative to current directory or prefixed with `$.` if relative to the root directory. |
+
+Exmaples:
+
+```
+ecoclient load Menu
+ecoclient get $.Games.Menu
+```
+
+## save [filename]
+
+Utilises `basictool` to tokenize the specified plain-text BASIC file on the local filesystem and uploads the result to the server with the same name (minus any `.bas` file extension).
+
+Assumes `basictool` is on the local machine's PATH.
+
+| Argument | Description |
+|----------|-------------|
+| filename  | Name of local file. |
+
+Exmaples:
+
+```
+ecoclient save Menu
+ecoclient save $.Games.Menu
+```
+
+## save [filename]
+
+Utilises `basictool` to tokenize the specified plain-text BASIC file on the local filesystem and uploads the result to the server with the same name (minus any `.bas` file extension).
+
+Assumes `basictool` is on the local machine's PATH.
+
+| Argument | Description |
+|----------|-------------|
+| filename  | Name of local file. |
+
+Exmaples:
+
+```
+ecoclient save Menu
+ecoclient save $.Games.Menu
+```
+
+## cat [dirPath]
+
+Provides a file listing for the specified directory.
+
+| Argument | Description |
+|----------|-------------|
+| dirPath  | Directory path: may be relative to the current directory or prefixed with `$.` to list a directory relative to the fileserver root. If ommitted, lists the current directory. |
+
+Exmaples:
+
+```
+ecoclient cat Subdir
+ecoclient cat $.Games
+```
+
+
+## cdir [dirPath]
+
+Creates a directory.
+
+| Argument | Description |
+|----------|-------------|
+| dirPath  | Directory path: may be relative to the current directory or prefixed with `$.` to create a directory relative to the fileserver root. |
+
+Exmaples:
+
+```
+ecoclient cdir Subdir
+ecoclient cdir $.Subdir
+```
+
+## delete [path]
+
+Deletes a file or directory.
+
+| Argument | Description |
+|----------|-------------|
+| path     | File or directory path: may be relative to the current directory or prefixed with `$.` to delete a directory relative to the fileserver root. |
+
+Exmaples:
+
+```
+ecoclient delete MyFile
+ecoclient cdir $.Games.MyFile
+```
+
+## access [path] [accessString]
+
+| Argument     | Description |
+|--------------|-------------|
+| path         | File or directory path: may be relative to the current directory or prefixed with `$.` to delete a directory relative to the fileserver root. |
+| accessString | An Econet access string e.g. `WR/R` |
+Exmaples:
+
+```
+ecoclient access MyFile WR/
+ecoclient access $.Games.MyFile WR/
+```
