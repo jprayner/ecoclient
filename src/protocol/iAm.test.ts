@@ -38,6 +38,30 @@ describe('iAm protocol handler', () => {
     });
   });
 
+  it('should omit password if not specified', async () => {
+    executeCliCommandMock.mockResolvedValueOnce({
+      controlByte: fsControlByte,
+      port: fsPort,
+      commandCode: 0,
+      resultCode: 0,
+      data: Buffer.from([0, 1, 2, 3]),
+    });
+    const result = await iAm(254, 'JPR93');
+    expect(executeCliCommandMock).toHaveBeenCalledWith(254, 'I AM JPR93', {
+      userRoot: 0,
+      current: 0,
+      library: 0,
+    });
+    expect(result).toEqual({
+      directoryHandles: {
+        userRoot: 1,
+        current: 0,
+        library: 2,
+      },
+      bootOption: 3,
+    });
+  });
+
   it('should call throw error on unexpected server reply length', async () => {
     executeCliCommandMock.mockResolvedValueOnce({
       controlByte: fsControlByte,

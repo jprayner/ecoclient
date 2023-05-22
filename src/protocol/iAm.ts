@@ -3,11 +3,11 @@ import { DirectoryHandles, executeCliCommand } from '../common';
 export const iAm = async (
   serverStation: number,
   username: string,
-  password: string,
+  password?: string,
 ) => {
   const serverReply = await executeCliCommand(
     serverStation,
-    `I AM ${username} ${password}`,
+    password ? `I AM ${username} ${password}` : `I AM ${username}`,
     {
       userRoot: 0,
       current: 0,
