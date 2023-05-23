@@ -43,7 +43,7 @@ export const standardTxMessage = (
 export const responseMatcher = (
   sourceStation: number,
   sourceNetwork: number,
-  controlByte: number,
+  controlByte: number | undefined,
   ports: number[],
 ) => {
   return (event: EconetEvent) => {
@@ -52,7 +52,8 @@ export const responseMatcher = (
       event.scoutFrame.length >= 6 &&
       event.scoutFrame[2] === sourceStation &&
       event.scoutFrame[3] === sourceNetwork &&
-      event.scoutFrame[4] === controlByte &&
+      (typeof controlByte === 'undefined' ||
+        event.scoutFrame[4] === controlByte) &&
       ports.find(p => p === event.scoutFrame[5]) !== undefined;
     return result;
   };
@@ -76,7 +77,7 @@ export const initConnection = async (
 
 export const waitForReceiveTxEvent = async (
   serverStation: number,
-  controlByte: number,
+  controlByte: number | undefined,
   ports: number[],
 ) => {
   const receiveTxEventTimeoutMs = 20000;

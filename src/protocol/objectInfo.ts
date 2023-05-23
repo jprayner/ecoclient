@@ -50,7 +50,7 @@ export const readDirAccessObjectInfo = async (
 
   const serverReply = await waitForReceiveTxEvent(
     serverStation,
-    fsControlByte,
+    undefined, // PiEconetBridge sets this to 0 instead of fsControlByte,
     [replyPort],
   );
 

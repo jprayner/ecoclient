@@ -137,9 +137,13 @@ describe('load protocol handler', () => {
     setupTransmitMock();
 
     waitForReceiveTxEventMock.mockImplementation(
-      async (station: number, controlByte: number, replyPorts: number[]) => {
+      async (
+        station: number,
+        controlByte: number | undefined,
+        replyPorts: number[],
+      ) => {
         return Promise.resolve({
-          controlByte,
+          controlByte: controlByte || 0,
           port: dataPort,
           commandCode: 0,
           resultCode: 0,
@@ -161,9 +165,13 @@ describe('load protocol handler', () => {
     setupTransmitMock();
 
     waitForReceiveTxEventMock.mockImplementation(
-      async (station: number, controlByte: number, replyPorts: number[]) => {
+      async (
+        station: number,
+        controlByte: number | undefined,
+        replyPorts: number[],
+      ) => {
         return Promise.resolve({
-          controlByte,
+          controlByte: controlByte || 0,
           port: replyPorts[0],
           commandCode: 0,
           resultCode: 1,
@@ -231,7 +239,11 @@ const setupTransmitMock = () => {
 
 const setupWaitForReceiveTxEventMock = () => {
   waitForReceiveTxEventMock.mockImplementation(
-    async (station: number, controlByte: number, replyPorts: number[]) => {
+    async (
+      station: number,
+      controlByte: number | undefined,
+      replyPorts: number[],
+    ) => {
       const header = Buffer.alloc(14);
       header.writeUInt32LE(loadAddr, 0);
       header.writeUInt32LE(execAddr, 4);
@@ -242,7 +254,7 @@ const setupWaitForReceiveTxEventMock = () => {
       const dirName12Chars = Buffer.from('FNAME       ');
       const trailer = Buffer.from([0xff, 0x4c]);
       return Promise.resolve({
-        controlByte,
+        controlByte: controlByte || 0,
         port: dataPort,
         commandCode: 0,
         resultCode: 0,

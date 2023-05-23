@@ -51,9 +51,9 @@ export const load = async (
     throw new Error(`Load failed: ${message}`);
   }
 
-  if (serverReply.data.length < 20) {
+  if (serverReply.data.length < 14) {
     throw new Error(
-      `Malformed response in LOAD from station ${serverStation}: success but not enough data`,
+      `Malformed response in LOAD from station ${serverStation}: success but not enough data (${serverReply.data.length} bytes received)`,
     );
   }
 
@@ -65,9 +65,11 @@ export const load = async (
     (serverReply.data[10] << 16);
   const access = serverReply.data[11];
   const date = serverReply.data.readUint16LE(12);
-  const actualFilename = parseAsciiString(
-    serverReply.data.subarray(14, 26),
-  ).trim();
+  const actualFilenameData = serverReply.data.subarray(14, 26);
+  const actualFilename =
+    actualFilenameData.length === 0
+      ? filename
+      : parseAsciiString(actualFilenameData).trim();
 
   const queue = driver.eventQueueCreate(
     responseMatcher(serverStation, 0, fsControlByte, [dataPort, replyPort]),
