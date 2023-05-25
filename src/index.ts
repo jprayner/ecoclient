@@ -83,11 +83,6 @@ const commandMonitor = async () => {
       continue;
     }
 
-    if (event instanceof ErrorEvent) {
-      console.error(`ERROR: ${event.description}`);
-      return;
-    }
-
     if (event instanceof RxDataEvent) {
       console.log(event.toString());
     }
@@ -549,12 +544,18 @@ const connectionDecorator =
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const options: object = args[args.length - 1];
     const configOptions = await resolveOptions(options);
+
     await initConnection(configOptions.deviceName, configOptions.localStation);
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       await errorHandlingDecorator(fn)(configOptions, ...args);
     } finally {
+      try {
+        await driver.setMode('STOP');
+      } catch (e: unknown) {
+        console.error('Failed to STOP driver: ' + (e instanceof Error ? e.message : 'unknown error'));
+      }
       await driver.close();
     }
   };
