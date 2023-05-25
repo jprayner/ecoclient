@@ -3,12 +3,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import {
-  driver,
-  EconetEvent,
-  ErrorEvent,
-  RxDataEvent,
-} from '@jprayner/piconet-nodejs';
+import { driver, EconetEvent, RxDataEvent } from '@jprayner/piconet-nodejs';
 import { Command, CommandOptions, Option } from 'commander';
 import { initConnection, loadFileInfo, saveFileInfo, sleepMs } from './common';
 import { load } from './protocol/load';
@@ -554,7 +549,10 @@ const connectionDecorator =
       try {
         await driver.setMode('STOP');
       } catch (e: unknown) {
-        console.error('Failed to STOP driver: ' + (e instanceof Error ? e.message : 'unknown error'));
+        console.error(
+          'Failed to STOP driver: ' +
+            (e instanceof Error ? e.message : 'unknown error'),
+        );
       }
       await driver.close();
     }
