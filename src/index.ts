@@ -48,6 +48,23 @@ const commandSetFileserver = async (station: string) => {
   await setServerStationNum(parseInt(station));
 };
 
+export const commandGetStatus = async (
+  options: ConfigOptions,
+) => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const configOptions = await resolveOptions(options);
+
+  await driver.connect(configOptions.deviceName);
+  const status = await driver.readStatus();
+  await driver.close();
+
+  console.log(`Ecoclient version  : ${PKG_VERSION}`);
+  console.log(`Firmware version   : ${status.firmwareVersion}`);
+  console.log(`Local station no.  : ${configOptions.localStation}`);
+  console.log(`Server station no. : ${configOptions.serverStation}`);
+  console.log(`ADLC status reg. 1 : ${status.statusRegister1.toString(2).padStart(8, '0')}`);
+};
+
 const commandNotify = async (
   options: CommandOptions,
   station: string,
@@ -260,6 +277,11 @@ const main = () => {
     .description('set Econet station')
     .argument('<station>', 'station number')
     .action(errorHandlingDecorator(commandSetStation));
+
+  program
+    .command('status')
+    .description('display status info for ecoclient and board')
+    .action(errorHandlingDecorator(commandGetStatus));
 
   program
     .command('notify')
