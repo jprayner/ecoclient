@@ -48,9 +48,7 @@ const commandSetFileserver = async (station: string) => {
   await setServerStationNum(parseInt(station));
 };
 
-export const commandGetStatus = async (
-  options: ConfigOptions,
-) => {
+export const commandGetStatus = async (options: ConfigOptions) => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const configOptions = await resolveOptions(options);
 
@@ -62,7 +60,11 @@ export const commandGetStatus = async (
   console.log(`Firmware version   : ${status.firmwareVersion}`);
   console.log(`Local station no.  : ${configOptions.localStation}`);
   console.log(`Server station no. : ${configOptions.serverStation}`);
-  console.log(`ADLC status reg. 1 : ${status.statusRegister1.toString(2).padStart(8, '0')}`);
+  console.log(
+    `ADLC status reg. 1 : ${status.statusRegister1
+      .toString(2)
+      .padStart(8, '0')}`,
+  );
 };
 
 const commandNotify = async (
