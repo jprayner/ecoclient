@@ -1,9 +1,11 @@
+import { getSaveThrottleMs } from '../config';
 import {
   DirectoryHandles,
   fsControlByte,
   fsPort,
   logProgress,
   responseMatcher,
+  sleepMs,
   standardTxMessage,
   stripCRs,
   waitForReceiveTxEvent,
@@ -18,6 +20,7 @@ export const save = async (
   execAddr: number,
   handles: DirectoryHandles,
 ) => {
+  const saveThrottleMs = await getSaveThrottleMs();
   const replyPort = 0x90;
   const ackPort = 0x91;
   const functionCode = 0x01;
@@ -112,7 +115,9 @@ export const save = async (
 
     if (dataLeftToSend.length > 0) {
       await driver.eventQueueWait(ackQueue, 2000);
+      await sleepMs(saveThrottleMs);
     }
+
     const sentBytes = fileSize - dataLeftToSend.length;
     const percentComplete = Math.round(100 * (sentBytes / fileSize));
     logProgress(`Saving ${sentBytes}/${fileSize} bytes [${percentComplete}%]`);
