@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { driver, EconetEvent, RxDataEvent } from '@jprayner/piconet-nodejs';
-import { Command, CommandOptions, Option } from 'commander';
+import { Command, CommandOptions } from 'commander';
 import { initConnection, loadFileInfo, saveFileInfo, sleepMs } from './common';
 import { load } from './protocol/load';
 import { save } from './protocol/save';
@@ -31,6 +31,8 @@ import { basename } from 'path';
 const basicLoadAddr = 0xffff0e00;
 const basicExecAddr = 0xffff2b80;
 
+const program = new Command();
+
 /**
  * Options which may come from config or be overridden at the command line.
  */
@@ -38,6 +40,7 @@ type ConfigOptions = {
   deviceName: string;
   localStation: number;
   serverStation: number;
+  debugEnabled: boolean;
 };
 
 const commandSetStation = async (station: string) => {
@@ -48,23 +51,39 @@ const commandSetFileserver = async (station: string) => {
   await setServerStationNum(parseInt(station));
 };
 
-export const commandGetStatus = async (options: ConfigOptions) => {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const configOptions = await resolveOptions(options);
-
-  await driver.connect(configOptions.deviceName);
-  const status = await driver.readStatus();
-  await driver.close();
+export const commandGetStatus = async () => {
+  const configOptions = await resolveOptions();
 
   console.log(`Ecoclient version  : ${PKG_VERSION}`);
-  console.log(`Firmware version   : ${status.firmwareVersion}`);
+  console.log(
+    `Device name        : ${
+      configOptions.deviceName ? configOptions.deviceName : '[auto]'
+    }`,
+  );
   console.log(`Local station no.  : ${configOptions.localStation}`);
   console.log(`Server station no. : ${configOptions.serverStation}`);
   console.log(
-    `ADLC status reg. 1 : ${status.statusRegister1
-      .toString(2)
-      .padStart(8, '0')}`,
+    `Debug enabled      : ${configOptions.debugEnabled ? 'true' : 'false'}`,
   );
+
+  try {
+    await driver.connect(configOptions.deviceName);
+    const status = await driver.readStatus();
+    await driver.close();
+
+    console.log('Board connected    : true');
+    console.log(`Firmware version   : ${status.firmwareVersion}`);
+
+    console.log(
+      `ADLC status reg. 1 : ${status.statusRegister1
+        .toString(2)
+        .padStart(8, '0')}`,
+    );
+  } catch (e: unknown) {
+    console.log('Board connected    : false');
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+    console.log(`Connection error   : ${e instanceof Error ? e.message : e}`);
+  }
 };
 
 const commandNotify = async (
@@ -261,12 +280,16 @@ const commandCat = async (options: ConfigOptions, dirPath: string) => {
 };
 
 const main = () => {
-  const program = new Command();
-
   program
     .name('ecoclient')
     .description('Econet fileserver client')
     .version(PKG_VERSION);
+
+  program
+    .option('-d, --debug', 'enable debug output')
+    .option('-n, --devicename <string>', 'specify device name/path')
+    .option('-s, --station <number>', 'specify local Econet station number')
+    .option('-fs, --fileserver <number>', 'specify fileserver station number');
 
   program
     .command('set-fs')
@@ -292,17 +315,11 @@ const main = () => {
     )
     .argument('<station>', 'station number')
     .argument('<message>', 'message')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
     .action(connectionDecorator(commandNotify));
 
   program
     .command('monitor')
     .description('listen for network traffic like a "*NETMON" command')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
     .action(connectionDecorator(commandMonitor));
 
   program
@@ -310,125 +327,35 @@ const main = () => {
     .description('login to fileserver like a "*I AM" command')
     .argument('<username>', 'username')
     .argument('[password]', 'password')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
-    .addOption(
-      new Option(
-        '-s, --station <number>',
-        'specify local Econet station number',
-      ),
-    )
-    .addOption(
-      new Option(
-        '-fs, --fileserver <number>',
-        'specify fileserver station number',
-      ).default(254),
-    )
     .action(connectionDecorator(commandIAm));
 
   program
     .command('bye')
     .description('logout of fileserver like a "*BYE" command')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
-    .addOption(
-      new Option(
-        '-s, --station <number>',
-        'specify local Econet station number',
-      ),
-    )
-    .addOption(
-      new Option(
-        '-fs, --fileserver <number>',
-        'specify fileserver station number',
-      ).default(254),
-    )
     .action(connectionDecorator(commandBye));
 
   program
     .command('dir')
     .description('change current directory')
     .argument('[dir]', 'directory path', '')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
-    .addOption(
-      new Option(
-        '-s, --station <number>',
-        'specify local Econet station number',
-      ),
-    )
-    .addOption(
-      new Option(
-        '-fs, --fileserver <number>',
-        'specify fileserver station number',
-      ).default(254),
-    )
     .action(connectionDecorator(commandDir));
 
   program
     .command('get')
     .description('get file from fileserver using "LOAD" command')
     .argument('<filename>', 'filename')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
-    .addOption(
-      new Option(
-        '-s, --station <number>',
-        'specify local Econet station number',
-      ),
-    )
-    .addOption(
-      new Option(
-        '-fs, --fileserver <number>',
-        'specify fileserver station number',
-      ).default(254),
-    )
     .action(connectionDecorator(commandGet));
 
   program
     .command('put')
     .description('get file from fileserver using "SAVE" command')
     .argument('<filename>', 'filename')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
-    .addOption(
-      new Option(
-        '-s, --station <number>',
-        'specify local Econet station number',
-      ),
-    )
-    .addOption(
-      new Option(
-        '-fs, --fileserver <number>',
-        'specify fileserver station number',
-      ).default(254),
-    )
     .action(connectionDecorator(commandPut));
 
   program
     .command('load')
     .description('load basic file and detokenise (needs basictool installed)')
     .argument('<filename>', 'filename')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
-    .addOption(
-      new Option(
-        '-s, --station <number>',
-        'specify local Econet station number',
-      ),
-    )
-    .addOption(
-      new Option(
-        '-fs, --fileserver <number>',
-        'specify fileserver station number',
-      ).default(254),
-    )
     .action(connectionDecorator(commandLoad));
 
   program
@@ -441,84 +368,24 @@ const main = () => {
       '[destPath]',
       'path to file on fileserver (defaults to filename part of localPath)',
     )
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
-    .addOption(
-      new Option(
-        '-s, --station <number>',
-        'specify local Econet station number',
-      ),
-    )
-    .addOption(
-      new Option(
-        '-fs, --fileserver <number>',
-        'specify fileserver station number',
-      ).default(254),
-    )
     .action(connectionDecorator(commandSave));
 
   program
     .command('cat')
     .description('get catalogue of directory from fileserver')
     .argument('[dirPath]', 'directory path', '')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
-    .addOption(
-      new Option(
-        '-s, --station <number>',
-        'specify local Econet station number',
-      ),
-    )
-    .addOption(
-      new Option(
-        '-fs, --fileserver <number>',
-        'specify fileserver station number',
-      ).default(1),
-    )
     .action(connectionDecorator(commandCat));
 
   program
     .command('cdir')
     .description('create directory on fileserver')
     .argument('<dirPath>', 'directory path')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
-    .addOption(
-      new Option(
-        '-s, --station <number>',
-        'specify local Econet station number',
-      ),
-    )
-    .addOption(
-      new Option(
-        '-fs, --fileserver <number>',
-        'specify fileserver station number',
-      ).default(254),
-    )
     .action(connectionDecorator(commandCdir));
 
   program
     .command('delete')
     .description('delete file on fileserver')
     .argument('<path>', 'file path')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
-    .addOption(
-      new Option(
-        '-s, --station <number>',
-        'specify local Econet station number',
-      ),
-    )
-    .addOption(
-      new Option(
-        '-fs, --fileserver <number>',
-        'specify fileserver station number',
-      ).default(254),
-    )
     .action(connectionDecorator(commandDelete));
 
   program
@@ -526,21 +393,6 @@ const main = () => {
     .description('set access on fileserver')
     .argument('<path>', 'file path')
     .argument('<accessString>', 'access string')
-    .addOption(
-      new Option('-dev, --device <string>', 'specify Pico serial device'),
-    )
-    .addOption(
-      new Option(
-        '-s, --station <number>',
-        'specify local Econet station number',
-      ),
-    )
-    .addOption(
-      new Option(
-        '-fs, --fileserver <number>',
-        'specify fileserver station number',
-      ).default(254),
-    )
     .action(connectionDecorator(commandAccess));
 
   program.parse(process.argv);
@@ -560,10 +412,9 @@ const main = () => {
 const connectionDecorator =
   (fn: (...args: any[]) => Promise<void>) =>
   async (...args: any[]) => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const options: object = args[args.length - 1];
-    const configOptions = await resolveOptions(options);
+    const configOptions = await resolveOptions();
 
+    driver.setDebugEnabled(configOptions.debugEnabled);
     await initConnection(configOptions.deviceName, configOptions.localStation);
 
     try {
@@ -600,51 +451,41 @@ const errorHandlingDecorator =
     }
   };
 
-const stringOption = (options: object, key: string): string | undefined => {
-  for (const [k, v] of Object.entries(options)) {
-    if (k === key && typeof v === 'string') {
-      return v;
-    }
-  }
+const resolveOptions = async () => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const deviceNameOption = program.opts().devicename;
+  const deviceName =
+    typeof deviceNameOption === 'string' ? deviceNameOption : undefined;
 
-  return undefined;
-};
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const serverStationOption = program.opts().fileserver;
+  const serverStation =
+    typeof serverStationOption === 'string'
+      ? parseInt(serverStationOption)
+      : await getServerStationNum();
 
-const intOption = (
-  options: object,
-  key: string,
-  defaultValue: number | undefined,
-): number | undefined => {
-  for (const [k, v] of Object.entries(options)) {
-    if (k === key && typeof v === 'string') {
-      return parseInt(v, 10);
-    }
-  }
-
-  return defaultValue;
-};
-
-const resolveOptions = async (options: object) => {
-  const deviceName = stringOption(options, 'deviceName');
-  const serverStation = intOption(
-    options,
-    'fileserver',
-    await getServerStationNum(),
-  );
-  const localStation = intOption(
-    options,
-    'station',
-    await getLocalStationNum(),
-  );
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const stationOption = program.opts().station;
+  const localStation =
+    typeof stationOption === 'string'
+      ? parseInt(stationOption)
+      : await getLocalStationNum();
   if (typeof localStation === 'undefined') {
     throw new Error(
       'You must specify an econet station number for this machine using the --station option (or store a default value using the set-station command)',
     );
   }
-  if (typeof serverStation === 'undefined') {
-    throw new Error('You must specify a fileserver number');
-  }
-  return { deviceName, serverStation, localStation } as ConfigOptions;
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const debugOption = program.opts().debug;
+  const debugEnabled = typeof debugOption === 'boolean' ? debugOption : false;
+
+  return {
+    deviceName,
+    serverStation,
+    localStation,
+    debugEnabled,
+  } as ConfigOptions;
 };
 
 main();
