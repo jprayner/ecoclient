@@ -62,88 +62,92 @@ export const save = async (
     requestData,
   );
 
-  const txResult = await driver.transmit(
-    serverStation,
-    0,
-    fsControlByte,
-    fsPort,
-    msg,
+  const replyQueue = driver.eventQueueCreate(
+    responseMatcher(serverStation, 0, fsControlByte, [replyPort]),
   );
-
-  if (!txResult.success) {
-    throw new Error(`Failed to send SAVE command to station ${serverStation}`);
-  }
-
-  const serverReply = await waitForReceiveTxEvent(
-    serverStation,
-    fsControlByte,
-    [replyPort],
-  );
-
-  if (serverReply.resultCode !== 0x00) {
-    const message = stripCRs(serverReply.data.toString('ascii'));
-    throw new Error(`Save failed: ${message}`);
-  }
-
-  if (serverReply.data.length < 3) {
-    throw new Error(
-      `Malformed response in SAVE from station ${serverStation}: success but not enough data`,
-    );
-  }
 
   const ackQueue = driver.eventQueueCreate(
     responseMatcher(serverStation, 0, fsControlByte, [ackPort]),
   );
 
-  const dataPort = serverReply.data[0];
-  const blockSize = serverReply.data.readUInt16LE(1);
-  let dataLeftToSend = Buffer.from(fileData);
-  const fileSize = dataLeftToSend.length;
-  while (dataLeftToSend.length > 0) {
-    const dataToSend = dataLeftToSend.slice(0, blockSize);
-    dataLeftToSend = dataLeftToSend.slice(blockSize);
-    const dataTxResult = await driver.transmit(
+  try {
+    const txResult = await driver.transmit(
       serverStation,
       0,
       fsControlByte,
-      dataPort,
-      dataToSend,
+      fsPort,
+      msg,
     );
-    if (!dataTxResult.success) {
-      throw new Error(`Failed to send SAVE data to station ${serverStation}`);
+
+    if (!txResult.success) {
+      throw new Error(
+        `Failed to send SAVE command to station ${serverStation}`,
+      );
     }
 
-    if (dataLeftToSend.length > 0) {
-      await driver.eventQueueWait(ackQueue, 2000);
-      await sleepMs(saveThrottleMs);
+    const serverReply = await waitForReceiveTxEvent(replyQueue, serverStation);
+
+    if (serverReply.resultCode !== 0x00) {
+      const message = stripCRs(serverReply.data.toString('ascii'));
+      throw new Error(`Save failed: ${message}`);
     }
 
-    const sentBytes = fileSize - dataLeftToSend.length;
-    const percentComplete = Math.round(100 * (sentBytes / fileSize));
-    logProgress(`Saving ${sentBytes}/${fileSize} bytes [${percentComplete}%]`);
-  }
-  logProgress('');
+    if (serverReply.data.length < 3) {
+      throw new Error(
+        `Malformed response in SAVE from station ${serverStation}: success but not enough data`,
+      );
+    }
 
-  // TODO: should use queue for save status? Destroy queue.
-  const finalReply = await waitForSaveStatus(
-    serverStation,
-    fsControlByte,
-    replyPort,
-  );
+    const dataPort = serverReply.data[0];
+    const blockSize = serverReply.data.readUInt16LE(1);
+    let dataLeftToSend = Buffer.from(fileData);
+    const fileSize = dataLeftToSend.length;
+    while (dataLeftToSend.length > 0) {
+      const dataToSend = dataLeftToSend.slice(0, blockSize);
+      dataLeftToSend = dataLeftToSend.slice(blockSize);
+      const dataTxResult = await driver.transmit(
+        serverStation,
+        0,
+        fsControlByte,
+        dataPort,
+        dataToSend,
+      );
+      if (!dataTxResult.success) {
+        throw new Error(`Failed to send SAVE data to station ${serverStation}`);
+      }
 
-  if (finalReply.resultCode !== 0x00) {
-    throw new Error('Save failed');
+      if (dataLeftToSend.length > 0) {
+        await driver.eventQueueWait(ackQueue, 10000);
+        await sleepMs(saveThrottleMs);
+      }
+
+      const sentBytes = fileSize - dataLeftToSend.length;
+      const percentComplete = Math.round(100 * (sentBytes / fileSize));
+      logProgress(
+        `Saving ${sentBytes}/${fileSize} bytes [${percentComplete}%]`,
+      );
+    }
+    logProgress('');
+
+    const finalReply = await waitForSaveStatus(replyQueue, serverStation);
+
+    if (finalReply.resultCode !== 0x00) {
+      throw new Error('Save failed');
+    }
+  } finally {
+    driver.eventQueueDestroy(replyQueue);
+    driver.eventQueueDestroy(ackQueue);
   }
 };
 
 const waitForSaveStatus = async (
+  queue: driver.EventQueue,
   serverStation: number,
-  controlByte: number,
-  statusPort: number,
 ) => {
-  const rxTransmitEvent = await driver.waitForEvent(
-    responseMatcher(serverStation, 0, controlByte, [statusPort]),
+  const rxTransmitEvent = await driver.eventQueueWait(
+    queue,
     2000,
+    'save status',
   );
   if (!(rxTransmitEvent instanceof RxTransmitEvent)) {
     throw new Error(`Unexpected response from station ${serverStation}`);

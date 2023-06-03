@@ -6,6 +6,7 @@ import {
   standardTxMessage,
   stripCRs,
   waitForReceiveTxEvent,
+  eventQueueForReceiveTxEvent,
 } from '../common';
 
 const timeoutMs = 2000;
@@ -47,70 +48,74 @@ export const examineDir = async (
     ]);
     const examinePathTrailer = Buffer.from(`${dirPath}\r`);
 
-    const msg = standardTxMessage(
+    const queue = eventQueueForReceiveTxEvent(serverStation, fsControlByte, [
       replyPort,
-      functionCode,
-      handles,
-      Buffer.concat([examineHeader, examinePathTrailer]),
-    );
+    ]);
 
-    const txResult = await driver.transmit(
-      serverStation,
-      0,
-      fsControlByte,
-      fsPort,
-      msg,
-    );
-
-    if (!txResult.success) {
-      throw new Error(
-        `Failed to send examine command to station ${serverStation}`,
+    try {
+      const msg = standardTxMessage(
+        replyPort,
+        functionCode,
+        handles,
+        Buffer.concat([examineHeader, examinePathTrailer]),
       );
-    }
 
-    const serverReply = await waitForReceiveTxEvent(
-      serverStation,
-      fsControlByte,
-      [replyPort],
-    );
-
-    if (serverReply.resultCode !== 0x00) {
-      const message = stripCRs(serverReply.data.toString('ascii'));
-      throw new Error(`Examine failed: ${message}`);
-    }
-
-    if (serverReply.data.length < 2) {
-      throw new Error(
-        `Malformed response from station ${serverStation}: success but not enough data`,
+      const txResult = await driver.transmit(
+        serverStation,
+        0,
+        fsControlByte,
+        fsPort,
+        msg,
       );
-    }
 
-    const numEntriesReturned = serverReply.data[0];
-    if (numEntriesReturned === 0) {
-      break;
-    }
+      if (!txResult.success) {
+        throw new Error(
+          `Failed to send examine command to station ${serverStation}`,
+        );
+      }
 
-    const fileData = serverReply.data.slice(2).toString('ascii');
-    const filesWithAccess = fileData
-      .split('\0')
-      .filter(
-        f => f.length != 0 && !(f.length === 1 && f.charCodeAt(0) === 0x80),
-      )
-      .map(f => {
-        const [name, loadAddress, execAddress, sizeBytes, access, date, id] =
-          f.split(/\s+/);
-        return {
-          id,
-          name,
-          loadAddress,
-          execAddress,
-          sizeBytes: parseInt(sizeBytes, 16),
-          date,
-          access,
-        };
-      });
-    results = results.concat(filesWithAccess);
-    startIndex += numEntriesReturned;
+      const serverReply = await waitForReceiveTxEvent(queue, serverStation);
+
+      if (serverReply.resultCode !== 0x00) {
+        const message = stripCRs(serverReply.data.toString('ascii'));
+        throw new Error(`Examine failed: ${message}`);
+      }
+
+      if (serverReply.data.length < 2) {
+        throw new Error(
+          `Malformed response from station ${serverStation}: success but not enough data`,
+        );
+      }
+
+      const numEntriesReturned = serverReply.data[0];
+      if (numEntriesReturned === 0) {
+        break;
+      }
+
+      const fileData = serverReply.data.slice(2).toString('ascii');
+      const filesWithAccess = fileData
+        .split('\0')
+        .filter(
+          f => f.length != 0 && !(f.length === 1 && f.charCodeAt(0) === 0x80),
+        )
+        .map(f => {
+          const [name, loadAddress, execAddress, sizeBytes, access, date, id] =
+            f.split(/\s+/);
+          return {
+            id,
+            name,
+            loadAddress,
+            execAddress,
+            sizeBytes: parseInt(sizeBytes, 16),
+            date,
+            access,
+          };
+        });
+      results = results.concat(filesWithAccess);
+      startIndex += numEntriesReturned;
+    } finally {
+      driver.eventQueueDestroy(queue);
+    }
   }
 
   if (hasTimedOut(startTime)) {

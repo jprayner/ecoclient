@@ -29,11 +29,7 @@ describe('objectInfo protocol handler', () => {
       );
 
     waitForReceiveTxEventMock.mockImplementation(
-      async (
-        station: number,
-        controlByte: number | undefined,
-        replyPorts: number[],
-      ) => {
+      async (queue: driver.EventQueue, serverStation: number) => {
         const header = Buffer.from([0, 0, 0]);
         const dirName10Chars = Buffer.from('SOMEDIR   ');
         const trailer = Buffer.from([
@@ -41,8 +37,8 @@ describe('objectInfo protocol handler', () => {
           0x10, // cycle number
         ]);
         return Promise.resolve({
-          controlByte: controlByte || 0,
-          port: replyPorts[0],
+          controlByte: 0x80,
+          port: 0x90,
           commandCode: 0,
           resultCode: 0,
           data: Buffer.concat([header, dirName10Chars, trailer]),
@@ -108,14 +104,10 @@ describe('objectInfo protocol handler', () => {
       );
 
     waitForReceiveTxEventMock.mockImplementation(
-      async (
-        station: number,
-        controlByte: number | undefined,
-        replyPorts: number[],
-      ) => {
+      async (queue: driver.EventQueue, serverStation: number) => {
         return Promise.resolve({
-          controlByte: controlByte || 0,
-          port: replyPorts[0],
+          controlByte: 0x80,
+          port: 0x90,
           commandCode: 0,
           resultCode: 1,
           data: Buffer.from([0, 0, 0]),

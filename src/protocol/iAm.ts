@@ -14,7 +14,6 @@ export const iAm = async (
       library: 0,
     },
   );
-
   if (serverReply.data.length < 4) {
     throw new Error(
       `Malformed response from station ${serverStation}: success but not enough data`,

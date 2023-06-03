@@ -3,6 +3,7 @@ import {
   DirectoryHandles,
   fsControlByte,
   fsPort,
+  responseMatcher,
   standardTxMessage,
   waitForReceiveTxEvent,
 } from '../common';
@@ -27,6 +28,10 @@ export const readDirAccessObjectInfo = async (
   ]);
   const objectInfoTrailer = Buffer.from(`${dirPath}\r`);
 
+  const queue = driver.eventQueueCreate(
+    responseMatcher(serverStation, 0, undefined, [replyPort]),
+  );
+
   const msg = standardTxMessage(
     replyPort,
     functionCode,
@@ -48,11 +53,7 @@ export const readDirAccessObjectInfo = async (
     );
   }
 
-  const serverReply = await waitForReceiveTxEvent(
-    serverStation,
-    undefined, // PiEconetBridge sets this to 0 instead of fsControlByte,
-    [replyPort],
-  );
+  const serverReply = await waitForReceiveTxEvent(queue, 2000);
 
   if (serverReply.data.length < 15) {
     throw new Error(

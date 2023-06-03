@@ -103,11 +103,12 @@ describe('common.executeCliCommand', () => {
         },
       );
     const waitForEventSpy = jest
-      .spyOn(driver, 'waitForEvent')
+      .spyOn(driver, 'eventQueueWait')
       .mockImplementation(
         async (
-          callback: (event: EconetEvent) => boolean,
+          queue: driver.EventQueue,
           timeoutMs: number,
+          description?: string,
         ) => {
           return Promise.resolve(
             dummyReplyRxTransmitEvent({
@@ -179,11 +180,12 @@ describe('common.executeCliCommand', () => {
         },
       );
     const waitForEventSpy = jest
-      .spyOn(driver, 'waitForEvent')
+      .spyOn(driver, 'eventQueueWait')
       .mockImplementation(
         async (
-          callback: (event: EconetEvent) => boolean,
+          queue: driver.EventQueue,
           timeoutMs: number,
+          description?: string,
         ) => {
           return Promise.resolve(
             dummyReplyRxTransmitEvent({

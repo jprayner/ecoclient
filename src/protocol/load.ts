@@ -29,32 +29,39 @@ export const load = async (
     Buffer.from(`${filename}\r`),
   );
 
-  const txResult = await driver.transmit(
-    serverStation,
-    0,
-    fsControlByte,
-    fsPort,
-    msg,
-  );
-  if (!txResult.success) {
-    throw new Error(`Failed to send LOAD command to station ${serverStation}`);
-  }
-
-  const serverReply = await waitForReceiveTxEvent(
-    serverStation,
-    fsControlByte,
-    [replyPort],
+  const initQueue = driver.eventQueueCreate(
+    responseMatcher(serverStation, 0, fsControlByte, [replyPort]),
   );
 
-  if (serverReply.resultCode !== 0x00) {
-    const message = stripCRs(serverReply.data.toString('ascii'));
-    throw new Error(`Load failed: ${message}`);
-  }
-
-  if (serverReply.data.length < 14) {
-    throw new Error(
-      `Malformed response in LOAD from station ${serverStation}: success but not enough data (${serverReply.data.length} bytes received)`,
+  let serverReply;
+  try {
+    const txResult = await driver.transmit(
+      serverStation,
+      0,
+      fsControlByte,
+      fsPort,
+      msg,
     );
+    if (!txResult.success) {
+      throw new Error(
+        `Failed to send LOAD command to station ${serverStation}`,
+      );
+    }
+
+    serverReply = await waitForReceiveTxEvent(initQueue, 2000);
+
+    if (serverReply.resultCode !== 0x00) {
+      const message = stripCRs(serverReply.data.toString('ascii'));
+      throw new Error(`Load failed: ${message}`);
+    }
+
+    if (serverReply.data.length < 14) {
+      throw new Error(
+        `Malformed response in LOAD from station ${serverStation}: success but not enough data (${serverReply.data.length} bytes received)`,
+      );
+    }
+  } finally {
+    driver.eventQueueDestroy(initQueue);
   }
 
   const loadAddr = serverReply.data.readUInt32LE(0);
@@ -103,6 +110,7 @@ export const load = async (
         }
 
         complete = true;
+
         break;
       }
 

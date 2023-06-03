@@ -75,15 +75,25 @@ export const initConnection = async (
   await driver.setMode('LISTEN');
 };
 
-export const waitForReceiveTxEvent = async (
+export const eventQueueForReceiveTxEvent = (
   serverStation: number,
   controlByte: number | undefined,
   ports: number[],
 ) => {
-  const receiveTxEventTimeoutMs = 20000;
-  const rxTransmitEvent = await driver.waitForEvent(
+  return driver.eventQueueCreate(
     responseMatcher(serverStation, 0, controlByte, ports),
+  );
+};
+
+export const waitForReceiveTxEvent = async (
+  queue: driver.EventQueue,
+  serverStation: number,
+) => {
+  const receiveTxEventTimeoutMs = 20000;
+  const rxTransmitEvent = await driver.eventQueueWait(
+    queue,
     receiveTxEventTimeoutMs,
+    'valid RxTransmitEvent',
   );
   if (!(rxTransmitEvent instanceof RxTransmitEvent)) {
     throw new Error(`Unexpected response from station ${serverStation}`);
@@ -114,32 +124,36 @@ export const executeCliCommand = async (
     Buffer.from(`${command}\r`),
   );
 
-  const txResult = await driver.transmit(
-    serverStation,
-    0,
-    fsControlByte,
-    fsPort,
-    msg,
-  );
+  const queue = eventQueueForReceiveTxEvent(serverStation, fsControlByte, [
+    replyPort,
+  ]);
 
-  if (!txResult.success) {
-    throw new Error(
-      `Failed to send command to station ${serverStation}: ${txResult.description}`,
+  try {
+    const txResult = await driver.transmit(
+      serverStation,
+      0,
+      fsControlByte,
+      fsPort,
+      msg,
     );
+
+    if (!txResult.success) {
+      throw new Error(
+        `Failed to send command to station ${serverStation}: ${txResult.description}`,
+      );
+    }
+
+    const serverReply = await waitForReceiveTxEvent(queue, serverStation);
+
+    if (serverReply.resultCode !== 0x00) {
+      const message = stripCRs(serverReply.data.toString('ascii'));
+      throw new Error(`Command failed: ${message}`);
+    }
+
+    return serverReply;
+  } finally {
+    driver.eventQueueDestroy(queue);
   }
-
-  const serverReply = await waitForReceiveTxEvent(
-    serverStation,
-    fsControlByte,
-    [replyPort],
-  );
-
-  if (serverReply.resultCode !== 0x00) {
-    const message = stripCRs(serverReply.data.toString('ascii'));
-    throw new Error(`Command failed: ${message}`);
-  }
-
-  return serverReply;
 };
 
 export const saveFileInfo = (localFilename: string, fileInfo: FileInfo) => {

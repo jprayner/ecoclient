@@ -1,6 +1,6 @@
 {
   "name": "@jprayner/ecoclient",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "Command-line utility for performing Econet operations using Piconet hardware.",
   "bin": {
     "ecoclient": "./build/index.js"
@@ -67,7 +67,7 @@
     "typescript": "^4.9.5"
   },
   "dependencies": {
-    "@jprayner/piconet-nodejs": "^2.0.0",
+    "@jprayner/piconet-nodejs": "^2.0.17",
     "commander": "^10.0.0"
   },
   "engines": {
