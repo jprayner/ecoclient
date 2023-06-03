@@ -108,7 +108,7 @@ describe('load protocol handler', () => {
     expect(result.date).toEqual(date);
     expect(result.data.toString('ascii')).toEqual('ABC');
   });
-/*
+
   it('should handle no server response correctly', async () => {
     stripCRsMock.mockImplementation((str: string) => str.replace(/\r/g, ''));
 
@@ -210,7 +210,6 @@ describe('load protocol handler', () => {
       load(254, 'FNAME', { userRoot: 0, current: 1, library: 2 }),
     ).rejects.toThrowError('Load failed: Oh dear, oh dear');
   });
-  */
 });
 
 const setupTransmitMock = () => {
