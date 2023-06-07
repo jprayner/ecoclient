@@ -9,7 +9,7 @@ import {
   eventQueueForReceiveTxEvent,
 } from '../common';
 
-const timeoutMs = 2000;
+const timeoutMs = 30000;
 const hasTimedOut = (startTime: number) => Date.now() - startTime > timeoutMs;
 
 export type FileInfo = {

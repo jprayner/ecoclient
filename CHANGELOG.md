@@ -1,5 +1,25 @@
 # CHANGELOG.md
 
+## 2.0.7 (2023-06-07)
+
+Fixes:
+
+- Increase CAT timeout from 2s to 30s
+
+Features:
+
+- None
+
+## 2.0.6 (2023-06-04)
+
+Fixes:
+
+- Deprecate waitForEvent (and stop using internally) due to timing issues
+
+Features:
+
+- Add toString() implementation to all error classes for easier logging
+
 ## 2.0.5 (2023-06-02)
 
 Fixes:
