@@ -62,14 +62,17 @@ export const responseMatcher = (
 export const initConnection = async (
   device: string | undefined,
   station: number,
+  debugEnabled: boolean,
 ) => {
   await driver.connect(device);
 
-  driver.addListener(event => {
-    if (event instanceof ErrorEvent) {
-      console.error(`ERROR: ${event.description}`);
-    }
-  });
+  if (debugEnabled) {
+    driver.addListener(event => {
+      if (event instanceof ErrorEvent) {
+        console.error(`ERROR: ${event.description}`);
+      }
+    });
+  }
 
   await driver.setEconetStation(station);
   await driver.setMode('LISTEN');

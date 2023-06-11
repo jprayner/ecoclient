@@ -415,7 +415,11 @@ const connectionDecorator =
     const configOptions = await resolveOptions();
 
     driver.setDebugEnabled(configOptions.debugEnabled);
-    await initConnection(configOptions.deviceName, configOptions.localStation);
+    await initConnection(
+      configOptions.deviceName,
+      configOptions.localStation,
+      configOptions.debugEnabled,
+    );
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
