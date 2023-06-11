@@ -75,7 +75,7 @@ describe('common.initConnection', () => {
       .spyOn(driver, 'setMode')
       .mockImplementation(async (mode: string) => Promise.resolve());
 
-    await initConnection('/dev/abc', 2);
+    await initConnection('/dev/abc', 2, false);
     expect(connectSpy).toHaveBeenCalledWith('/dev/abc');
     expect(setEconetStationSpy).toHaveBeenCalledWith(2);
     expect(setModeSpy).toHaveBeenCalledWith('LISTEN');

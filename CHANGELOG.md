@@ -1,5 +1,15 @@
 # CHANGELOG.md
 
+## 2.0.9 (2023-06-11)
+
+Fixes:
+
+- Hide board errors unless debug turned on
+
+Features:
+
+- None
+
 ## 2.0.8 (2023-06-11)
 
 Fixes:
