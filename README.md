@@ -26,7 +26,7 @@ ecoclient set-station 32    # an unassigned station number on you local Econet n
 
 This project is still under development. Currently:
 
-- Most fileserver testing has been against a Level 3 (BBC) fileserver although a Level 4 fileserver (Archimedes) and [PiEconetBridge fileserver](https://github.com/cr12925/PiEconetBridge) have also been used.
+- Most fileserver testing has been against a Level 3 (BBC) fileserver although a Level 4 fileserver (Archimedes) and [PiEconetBridge fileserver](https://github.com/cr12925/PiEconetBridge) have also been used. User testing suggests that an Acorn Filestore also works (with floppy disks).
 - Most host OS testing has been performed on a Mac, although Linux and Windows have also been tried successfully.
 - More fileserver commands to be supported soon e.g. `SDISC`, `PASS` etc.
 
