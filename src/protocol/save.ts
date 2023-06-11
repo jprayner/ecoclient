@@ -1,4 +1,3 @@
-import { getSaveThrottleMs } from '../config';
 import {
   DirectoryHandles,
   fsControlByte,
@@ -20,7 +19,6 @@ export const save = async (
   execAddr: number,
   handles: DirectoryHandles,
 ) => {
-  const saveThrottleMs = await getSaveThrottleMs();
   const replyPort = 0x90;
   const ackPort = 0x91;
   const functionCode = 0x01;
@@ -105,20 +103,35 @@ export const save = async (
     while (dataLeftToSend.length > 0) {
       const dataToSend = dataLeftToSend.slice(0, blockSize);
       dataLeftToSend = dataLeftToSend.slice(blockSize);
-      const dataTxResult = await driver.transmit(
-        serverStation,
-        0,
-        fsControlByte,
-        dataPort,
-        dataToSend,
-      );
-      if (!dataTxResult.success) {
-        throw new Error(`Failed to send SAVE data to station ${serverStation}`);
+
+      let sendSuccess = false;
+      let lastError = '';
+      for (let retry = 0; retry < 3 && !sendSuccess; retry++) {
+        const dataTxResult = await driver.transmit(
+          serverStation,
+          0,
+          fsControlByte,
+          dataPort,
+          dataToSend,
+        );
+        sendSuccess = dataTxResult.success;
+        if (!dataTxResult.success) {
+          console.error(
+            `\nFailed to send SAVE data to station ${serverStation}: ${dataTxResult.description}}`,
+          );
+          lastError = dataTxResult.description;
+          await sleepMs(100);
+        }
+      }
+
+      if (!sendSuccess) {
+        throw new Error(
+          `Failed to send SAVE data to station ${serverStation}: ${lastError}}`,
+        );
       }
 
       if (dataLeftToSend.length > 0) {
-        await driver.eventQueueWait(ackQueue, 10000);
-        await sleepMs(saveThrottleMs);
+        await driver.eventQueueWait(ackQueue, 10000, 'data ack');
       }
 
       const sentBytes = fileSize - dataLeftToSend.length;

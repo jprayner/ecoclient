@@ -14,7 +14,6 @@ type Config = {
   handleUserRootDir: number | undefined;
   handleCurrentDir: number | undefined;
   handleLibDir: number | undefined;
-  saveThrottleMs: number;
 };
 
 const defaultConfig: Config = {
@@ -23,7 +22,6 @@ const defaultConfig: Config = {
   handleUserRootDir: undefined,
   handleCurrentDir: undefined,
   handleLibDir: undefined,
-  saveThrottleMs: 200,
 };
 
 export const getLocalStationNum = async (): Promise<number | undefined> => {
@@ -55,11 +53,6 @@ export const setServerStationNum = async (
   const config = await readConfigOrUseDefault();
   config.serverStationNum = stationNum;
   await writeConfig(config);
-};
-
-export const getSaveThrottleMs = async (): Promise<number> => {
-  const { saveThrottleMs } = await readConfigOrUseDefault();
-  return saveThrottleMs;
 };
 
 export const getHandles = async (): Promise<DirectoryHandles> => {
@@ -196,12 +189,6 @@ const readConfig = async (): Promise<Config> => {
       ? fileAsObject.handleLibDir
       : undefined;
 
-  const saveThrottleMs =
-    'saveThrottleMs' in fileAsObject &&
-    typeof fileAsObject.saveThrottleMs === 'number'
-      ? fileAsObject.saveThrottleMs
-      : undefined;
-
   return {
     localStationNum:
       validStationNumOrUndefined(localStationNum) ??
@@ -212,7 +199,6 @@ const readConfig = async (): Promise<Config> => {
     handleUserRootDir,
     handleCurrentDir,
     handleLibDir,
-    saveThrottleMs: saveThrottleMs ?? defaultConfig.saveThrottleMs,
   };
 };
 
@@ -226,7 +212,6 @@ const readConfigOrUseDefault = async (): Promise<Config> => {
       handleUserRootDir: defaultConfig.handleUserRootDir,
       handleCurrentDir: defaultConfig.handleCurrentDir,
       handleLibDir: defaultConfig.handleLibDir,
-      saveThrottleMs: defaultConfig.saveThrottleMs,
     };
   }
 };

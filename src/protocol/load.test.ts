@@ -103,7 +103,6 @@ describe('load protocol handler', () => {
     expect(result.loadAddr).toEqual(loadAddr);
     expect(result.execAddr).toEqual(execAddr);
     expect(result.size).toEqual(size);
-    expect(result.actualSize).toEqual(size);
     expect(result.access).toEqual(access);
     expect(result.date).toEqual(date);
     expect(result.data.toString('ascii')).toEqual('ABC');

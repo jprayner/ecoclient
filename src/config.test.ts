@@ -11,7 +11,6 @@ import {
   setHandleCurrentDir,
   setHandleUserRootDir,
   setHandleLibDir,
-  getSaveThrottleMs,
 } from './config';
 
 let originalLocalStationNum: number | undefined;
@@ -39,7 +38,6 @@ describe('config', () => {
   it('should return correct defaults where no configuration exists', async () => {
     expect(await getLocalStationNum()).toBeUndefined();
     expect(await getServerStationNum()).toEqual(254);
-    expect(await getSaveThrottleMs()).toEqual(200);
   });
 
   it('should save local station number correctly', async () => {

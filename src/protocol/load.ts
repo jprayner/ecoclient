@@ -48,7 +48,11 @@ export const load = async (
       );
     }
 
-    serverReply = await waitForReceiveTxEvent(initQueue, 2000);
+    serverReply = await waitForReceiveTxEvent(
+      initQueue,
+      2000,
+      'waiting for LOAD response',
+    );
 
     if (serverReply.resultCode !== 0x00) {
       const message = stripCRs(serverReply.data.toString('ascii'));
@@ -82,63 +86,74 @@ export const load = async (
     responseMatcher(serverStation, 0, fsControlByte, [dataPort, replyPort]),
   );
 
-  let data = Buffer.from('');
-  let complete = false;
-  while (!complete) {
-    const rxTransmitEvent = await driver.eventQueueWait(queue, 2000);
+  try {
+    let data = Buffer.from('');
+    let complete = false;
+    while (!complete) {
+      const rxTransmitEvent = await driver.eventQueueWait(
+        queue,
+        10000,
+        'next data packet',
+      );
 
-    if (
-      !(rxTransmitEvent instanceof RxTransmitEvent) ||
-      rxTransmitEvent.scoutFrame.length < 6
-    ) {
-      throw new Error(`Unexpected response from station ${serverStation}`);
-    }
-
-    const port = rxTransmitEvent.scoutFrame[5];
-    switch (port) {
-      case replyPort: {
-        if (rxTransmitEvent.dataFrame.length < 6) {
-          throw new Error(`Malformed response from station ${serverStation}`);
-        }
-
-        const resultCode = rxTransmitEvent.dataFrame[5];
-        const messageData = rxTransmitEvent.dataFrame.slice(6);
-
-        if (resultCode !== 0x00) {
-          const message = stripCRs(messageData.toString('ascii'));
-          throw new Error(`Load failed: ${message}`);
-        }
-
-        complete = true;
-
-        break;
+      if (
+        !(rxTransmitEvent instanceof RxTransmitEvent) ||
+        rxTransmitEvent.scoutFrame.length < 6
+      ) {
+        throw new Error(`Unexpected response from station ${serverStation}`);
       }
 
-      case dataPort:
-        if (rxTransmitEvent.dataFrame.length < 4) {
-          throw new Error(`Malformed response from station ${serverStation}`);
+      const port = rxTransmitEvent.scoutFrame[5];
+      switch (port) {
+        case replyPort: {
+          if (rxTransmitEvent.dataFrame.length < 6) {
+            throw new Error(`Malformed response from station ${serverStation}`);
+          }
+
+          const resultCode = rxTransmitEvent.dataFrame[5];
+          const messageData = rxTransmitEvent.dataFrame.slice(6);
+
+          if (resultCode !== 0x00) {
+            const message = stripCRs(messageData.toString('ascii'));
+            throw new Error(`Load failed: ${message}`);
+          }
+
+          if (size !== data.length) {
+            throw new Error(`Received ${data.length} bytes, expected ${size}`);
+          }
+
+          complete = true;
+
+          break;
         }
 
-        data = Buffer.concat([data, rxTransmitEvent.dataFrame.slice(4)]);
-        break;
+        case dataPort:
+          if (rxTransmitEvent.dataFrame.length < 4) {
+            throw new Error(
+              `Malformed data frame from station ${serverStation}`,
+            );
+          }
+
+          data = Buffer.concat([data, rxTransmitEvent.dataFrame.slice(4)]);
+          break;
+      }
+      const percentComplete = Math.round(100 * (data.length / size));
+      logProgress(`Loading ${data.length}/${size} bytes [${percentComplete}%]`);
     }
-    const percentComplete = Math.round(100 * (data.length / size));
-    logProgress(`Loading ${data.length}/${size} bytes [${percentComplete}%]`);
+
+    return {
+      loadAddr,
+      execAddr,
+      size,
+      access,
+      date,
+      actualFilename,
+      data,
+    };
+  } finally {
+    logProgress('');
+    driver.eventQueueDestroy(queue);
   }
-
-  logProgress('');
-  driver.eventQueueDestroy(queue);
-
-  return {
-    loadAddr,
-    execAddr,
-    size,
-    access,
-    date,
-    actualFilename,
-    actualSize: data.length,
-    data,
-  };
 };
 
 const parseAsciiString = (buffer: Buffer) => {

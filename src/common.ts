@@ -88,12 +88,13 @@ export const eventQueueForReceiveTxEvent = (
 export const waitForReceiveTxEvent = async (
   queue: driver.EventQueue,
   serverStation: number,
+  description?: string,
 ) => {
   const receiveTxEventTimeoutMs = 20000;
   const rxTransmitEvent = await driver.eventQueueWait(
     queue,
     receiveTxEventTimeoutMs,
-    'valid RxTransmitEvent',
+    description || 'valid RxTransmitEvent',
   );
   if (!(rxTransmitEvent instanceof RxTransmitEvent)) {
     throw new Error(`Unexpected response from station ${serverStation}`);

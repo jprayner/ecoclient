@@ -1,5 +1,15 @@
 # CHANGELOG.md
 
+## 2.0.8 (2023-06-11)
+
+Fixes:
+
+- Add save retries
+
+Features:
+
+- None
+
 ## 2.0.7 (2023-06-07)
 
 Fixes:
