@@ -1,5 +1,15 @@
 # CHANGELOG.md
 
+## 2.0.10 (2023-06-11)
+
+Fixes:
+
+- Don't show save error unless retry fails
+
+Features:
+
+- None
+
 ## 2.0.9 (2023-06-11)
 
 Fixes:

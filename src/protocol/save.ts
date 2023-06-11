@@ -116,9 +116,6 @@ export const save = async (
         );
         sendSuccess = dataTxResult.success;
         if (!dataTxResult.success) {
-          console.error(
-            `\nFailed to send SAVE data to station ${serverStation}: ${dataTxResult.description}}`,
-          );
           lastError = dataTxResult.description;
           await sleepMs(100);
         }
