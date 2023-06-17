@@ -1,5 +1,25 @@
 # CHANGELOG.md
 
+## 2.0.12 (2023-06-17)
+
+Fixes:
+
+- Correct output of ecoclient help for put command (thanks jubber!)
+
+Features:
+
+- None
+
+## 2.0.11 (2023-06-17)
+
+Fixes:
+
+- Add set-metadata config option
+
+Features:
+
+- None
+
 ## 2.0.10 (2023-06-11)
 
 Fixes:

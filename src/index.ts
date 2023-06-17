@@ -396,7 +396,7 @@ const main = () => {
 
   program
     .command('put')
-    .description('get file from fileserver using "SAVE" command')
+    .description('put file to fileserver using "SAVE" command')
     .argument('<filename>', 'filename')
     .action(connectionDecorator(commandPut));
 
