@@ -9,9 +9,12 @@ import {
 import { readFileSync, rmSync, writeFileSync } from 'fs';
 import {
   executeCliCommand,
+  fileInfoFromFilename,
   fsControlByte,
   fsPort,
   initConnection,
+  isLoadExecFilename,
+  isValidFilename,
   loadFileInfo,
   responseMatcher,
   saveFileInfo,
@@ -255,6 +258,71 @@ describe('common.saveFileInfo', () => {
     expect(fileInfoLines.length).toBe(2);
     expect(fileInfoLines[0]).toBe('testFile   FFFF1234 FFFFABCD');
     expect(fileInfoLines[1]).toBe('');
+  });
+});
+
+describe('common.isValidFilename', () => {
+  it('should accept valid filenames', () => {
+    expect(isValidFilename('1')).toBe(true);
+    expect(isValidFilename('HELLO')).toBe(true);
+    expect(isValidFilename('hello')).toBe(true);
+    expect(isValidFilename('!BOOT')).toBe(true);
+    expect(isValidFilename('MY_FILE')).toBe(true);
+    expect(isValidFilename('MY-FILE')).toBe(true);
+  });
+
+  it('should reject invalid filenames', () => {
+    expect(isValidFilename('')).toBe(false);
+    expect(isValidFilename('12345678901')).toBe(false);
+    expect(isValidFilename('X&Y')).toBe(false);
+    expect(isValidFilename('"FILE')).toBe(false);
+  });
+});
+
+describe('common.isLoadExecFilename', () => {
+  it('should match appropriate filenames', () => {
+    expect(isLoadExecFilename('SJMON,FFFF1B00,FFFF1B00')).toBe(true);
+    expect(isLoadExecFilename('1,FFFF1B00,FFFF1B00')).toBe(true);
+    expect(isLoadExecFilename('a,FFFF1B00,FFFF1B00')).toBe(true);
+    expect(isLoadExecFilename('A,FFFF1B00,FFFF1B00')).toBe(true);
+    expect(isLoadExecFilename('A_FILE,FFFF1B00,FFFF1B00')).toBe(true);
+    expect(isLoadExecFilename('A-FILE,FFFF1B00,FFFF1B00')).toBe(true);
+    expect(isLoadExecFilename('SJMON,FFFF1B00,FFFF1B00')).toBe(true);
+    expect(isLoadExecFilename('sjmon,FFFF1B00,FFFF1B00')).toBe(true);
+    expect(isLoadExecFilename('sjmon,ffff1B00,FFFF1B00')).toBe(true);
+    expect(isLoadExecFilename('sjmon,00000000,FFFF1B00')).toBe(true);
+  });
+
+  it('should not match appropriate filenames', () => {
+    expect(isLoadExecFilename('SJMON')).toBe(false);
+    expect(isLoadExecFilename('sjmon,GGGGGGGG,FFFF1B00')).toBe(false);
+    expect(isLoadExecFilename('sjmon,ffff1B00,FFFF1B00XXXX')).toBe(false);
+    expect(isLoadExecFilename('sjmon$00000000$FFFF1B00')).toBe(false);
+  });
+});
+
+describe('common.fileInfoFromFilename', () => {
+  it('should extract name and load/exec addresses correctly', () => {
+    expect(fileInfoFromFilename('SJMON,00000001,00000002')).toEqual({
+      originalFilename: 'SJMON',
+      loadAddr: 0x00000001,
+      execAddr: 0x00000002,
+    });
+    expect(fileInfoFromFilename('SJMON,FFFFFFFE,FFFFFFFF')).toEqual({
+      originalFilename: 'SJMON',
+      loadAddr: 0xfffffffe,
+      execAddr: 0xffffffff,
+    });
+    expect(fileInfoFromFilename('SOME-FILE,FFFFFFFE,FFFFFFFF')).toEqual({
+      originalFilename: 'SOME-FILE',
+      loadAddr: 0xfffffffe,
+      execAddr: 0xffffffff,
+    });
+    expect(fileInfoFromFilename('SOME_FILE,FFFFFFFE,FFFFFFFF')).toEqual({
+      originalFilename: 'SOME_FILE',
+      loadAddr: 0xfffffffe,
+      execAddr: 0xffffffff,
+    });
   });
 });
 

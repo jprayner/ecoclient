@@ -8,12 +8,15 @@ const configFilename = 'config.json';
 const configDirPath = path.join(os.homedir(), configDir);
 const configFilePath = path.join(configDirPath, configFilename);
 
+export type MetadataType = 'inf' | 'filename' | 'none';
+
 type Config = {
   localStationNum: number | undefined;
   serverStationNum: number;
   handleUserRootDir: number | undefined;
   handleCurrentDir: number | undefined;
   handleLibDir: number | undefined;
+  metadata: MetadataType;
 };
 
 const defaultConfig: Config = {
@@ -22,6 +25,20 @@ const defaultConfig: Config = {
   handleUserRootDir: undefined,
   handleCurrentDir: undefined,
   handleLibDir: undefined,
+  metadata: 'inf',
+};
+
+export const stringToMetadataType = (str: string): MetadataType | undefined => {
+  switch (str) {
+    case 'inf':
+      return 'inf';
+    case 'filename':
+      return 'filename';
+    case 'none':
+      return 'none';
+    default:
+      return undefined;
+  }
 };
 
 export const getLocalStationNum = async (): Promise<number | undefined> => {
@@ -103,6 +120,19 @@ export const getHandleLibDir = async (): Promise<number | undefined> => {
 export const setHandleLibDir = async (handle: number): Promise<void> => {
   const config = await readConfigOrUseDefault();
   config.handleLibDir = handle;
+  await writeConfig(config);
+};
+
+export const getMetadataType = async (): Promise<MetadataType> => {
+  const { metadata } = await readConfigOrUseDefault();
+  return metadata;
+};
+
+export const setMetadataType = async (
+  metadata: MetadataType,
+): Promise<void> => {
+  const config = await readConfigOrUseDefault();
+  config.metadata = metadata;
   await writeConfig(config);
 };
 
@@ -189,6 +219,13 @@ const readConfig = async (): Promise<Config> => {
       ? fileAsObject.handleLibDir
       : undefined;
 
+  const metadata =
+    'metadata' in fileAsObject &&
+    typeof fileAsObject.metadata === 'string' &&
+    ['inf', 'filename', 'none'].includes(fileAsObject.metadata)
+      ? stringToMetadataType(fileAsObject.metadata) || 'inf'
+      : 'inf';
+
   return {
     localStationNum:
       validStationNumOrUndefined(localStationNum) ??
@@ -199,6 +236,7 @@ const readConfig = async (): Promise<Config> => {
     handleUserRootDir,
     handleCurrentDir,
     handleLibDir,
+    metadata,
   };
 };
 
@@ -212,6 +250,7 @@ const readConfigOrUseDefault = async (): Promise<Config> => {
       handleUserRootDir: defaultConfig.handleUserRootDir,
       handleCurrentDir: defaultConfig.handleCurrentDir,
       handleLibDir: defaultConfig.handleLibDir,
+      metadata: defaultConfig.metadata,
     };
   }
 };

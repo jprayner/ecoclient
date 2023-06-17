@@ -212,6 +212,37 @@ export const logProgress = (message: string) => {
   }
 };
 
+export const isValidFilename = (filename: string) => {
+  const validFilename = /^[a-zA-Z0-9!_-]{1,10}$/;
+  return validFilename.test(filename);
+};
+
+export const isLoadExecFilename = (filename: string) => {
+  const loadExecFilename =
+    /^[a-zA-Z0-9!_-]{1,10},[0-9A-Fa-f]{8},[0-9A-Fa-f]{8}$/;
+  return loadExecFilename.test(filename);
+};
+
+export const fileInfoFromFilename = (
+  filename: string,
+): FileInfo | undefined => {
+  if (!isLoadExecFilename) {
+    return undefined;
+  }
+
+  const parts = filename.split(',');
+
+  if (parts.length !== 3) {
+    return undefined;
+  }
+
+  return {
+    originalFilename: parts[0],
+    loadAddr: parseInt(parts[1], 16),
+    execAddr: parseInt(parts[2], 16),
+  };
+};
+
 export const sleepMs = (ms: number) => {
   return new Promise(resolve => setTimeout(resolve, ms));
 };

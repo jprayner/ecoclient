@@ -5,7 +5,13 @@ import * as path from 'path';
 
 import { driver, EconetEvent, RxDataEvent } from '@jprayner/piconet-nodejs';
 import { Command, CommandOptions } from 'commander';
-import { initConnection, loadFileInfo, saveFileInfo, sleepMs } from './common';
+import {
+  fileInfoFromFilename,
+  initConnection,
+  loadFileInfo,
+  saveFileInfo,
+  sleepMs,
+} from './common';
 import { load } from './protocol/load';
 import { save } from './protocol/save';
 import { readDirAccessObjectInfo } from './protocol/objectInfo';
@@ -15,6 +21,7 @@ import { access, bye, cdir, deleteFile } from './protocol/simpleCli';
 import { notify } from './protocol/notify';
 import { PKG_VERSION } from './version';
 import {
+  stringToMetadataType,
   getLocalStationNum,
   getServerStationNum,
   setHandleCurrentDir,
@@ -23,6 +30,8 @@ import {
   setLocalStationNum,
   setServerStationNum,
   getHandles,
+  getMetadataType,
+  setMetadataType,
 } from './config';
 import { spawnSync } from 'child_process';
 import { dir } from './protocol/dir';
@@ -49,6 +58,15 @@ const commandSetStation = async (station: string) => {
 
 const commandSetFileserver = async (station: string) => {
   await setServerStationNum(parseInt(station));
+};
+
+const commandSetMetadata = async (type: string) => {
+  const typeValue = stringToMetadataType(type);
+  if (typeof typeValue === 'undefined') {
+    throw new Error(`Invalid metadata type "${type}"`);
+  }
+
+  await setMetadataType(typeValue);
 };
 
 export const commandGetStatus = async () => {
@@ -169,16 +187,40 @@ const commandGet = async (options: ConfigOptions, filename: string) => {
     filename,
     await getHandles(),
   );
-  fs.writeFileSync(result.actualFilename, result.data);
-  saveFileInfo(result.actualFilename, {
-    originalFilename: result.actualFilename,
-    loadAddr: result.loadAddr,
-    execAddr: result.execAddr,
-  });
+  switch (await getMetadataType()) {
+    case 'inf':
+      fs.writeFileSync(result.actualFilename, result.data);
+      saveFileInfo(result.actualFilename, {
+        originalFilename: result.actualFilename,
+        loadAddr: result.loadAddr,
+        execAddr: result.execAddr,
+      });
+      break;
+
+    case 'filename': {
+      const loadAddr = result.loadAddr
+        .toString(16)
+        .toUpperCase()
+        .padStart(8, '0');
+      const execAddr = result.loadAddr
+        .toString(16)
+        .toUpperCase()
+        .padStart(8, '0');
+      fs.writeFileSync(
+        `${result.actualFilename},${loadAddr},${execAddr}`,
+        result.data,
+      );
+      break;
+    }
+    default:
+      fs.writeFileSync(result.actualFilename, result.data);
+      break;
+  }
 };
 
 const commandPut = async (options: ConfigOptions, filename: string) => {
-  const fileInfo = loadFileInfo(filename);
+  const fileInfo =
+    fileInfoFromFilename(path.basename(filename)) || loadFileInfo(filename);
   const fileData = fs.readFileSync(filename);
   const fileTitle = `${path.basename(filename)}`;
   await save(
@@ -302,6 +344,12 @@ const main = () => {
     .description('set Econet station')
     .argument('<station>', 'station number')
     .action(errorHandlingDecorator(commandSetStation));
+
+  program
+    .command('set-metadata')
+    .description('set metadata storage mechanism (inf|filename|none)')
+    .argument('<type>', '(inf|filename|none)')
+    .action(errorHandlingDecorator(commandSetMetadata));
 
   program
     .command('status')
