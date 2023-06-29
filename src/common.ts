@@ -12,6 +12,13 @@ export const replyPort = 0x90;
 
 export const stripCRs = (str: string) => str.replace(/\r/g, '');
 
+export type ConfigOptions = {
+  deviceName: string;
+  localStation: number;
+  serverStation: number;
+  debugEnabled: boolean;
+};
+
 export type DirectoryHandles = {
   userRoot: number;
   current: number;
