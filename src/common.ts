@@ -154,7 +154,7 @@ export const executeCliCommand = async (
       );
     }
 
-    const serverReply = await waitForReceiveTxEvent(queue, serverStation);
+    const serverReply = await waitForReceiveTxEvent(queue, serverStation, 'CLI response');
 
     if (serverReply.resultCode !== 0x00) {
       const message = stripCRs(serverReply.data.toString('ascii'));

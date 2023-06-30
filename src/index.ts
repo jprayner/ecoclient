@@ -270,12 +270,12 @@ const resolveConfig = async (cliOptions: CliOptions) => {
  * @param parameters The parameters to pass to operation.
  * @returns The result of the operation.
  */
-function errorHandlingWrapper<Args extends unknown[], Return>(
-  operation: (...operationParameters: Args) => Return,
+async function errorHandlingWrapper<Args extends unknown[], Return>(
+  operation: (...operationParameters: Args) => Promise<Return>,
   ...parameters: Args
-): Return {
+): Promise<Return> {
   try {
-    return operation(...parameters);
+    return await operation(...parameters);
   } catch (e: unknown) {
     console.error(e instanceof Error ? e.message : e);
     process.exit(1);
@@ -295,7 +295,7 @@ function errorHandlingWrapper<Args extends unknown[], Return>(
  * @returns The result of the operation.
  */
 async function connectionWrapper<Args extends unknown[], Return>(
-  operation: (...operationParameters: Args) => Return,
+  operation: (...operationParameters: Args) => Promise<Return>,
   configOptions: ConfigOptions,
   ...parameters: Args
 ): Promise<Return> {
@@ -307,7 +307,7 @@ async function connectionWrapper<Args extends unknown[], Return>(
   );
 
   try {
-    return errorHandlingWrapper(operation, ...parameters);
+    return await errorHandlingWrapper(operation, ...parameters);
   } finally {
     try {
       await driver.setMode('STOP');
