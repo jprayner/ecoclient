@@ -58,7 +58,6 @@ program
 program
   .command('status')
   .description('display status info for ecoclient and board')
-  .option('--test')
   .action(async () => {
     const config = await resolveConfig(program.opts());
     await errorHandlingWrapper(commandGetStatus, config);
