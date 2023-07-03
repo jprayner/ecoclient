@@ -154,7 +154,11 @@ export const executeCliCommand = async (
       );
     }
 
-    const serverReply = await waitForReceiveTxEvent(queue, serverStation, 'CLI response');
+    const serverReply = await waitForReceiveTxEvent(
+      queue,
+      serverStation,
+      'CLI response',
+    );
 
     if (serverReply.resultCode !== 0x00) {
       const message = stripCRs(serverReply.data.toString('ascii'));
@@ -248,6 +252,20 @@ export const fileInfoFromFilename = (
     loadAddr: parseInt(parts[1], 16),
     execAddr: parseInt(parts[2], 16),
   };
+};
+
+export const getKeyPress = async () => {
+  return new Promise(resolve => {
+    if (process.stdin.isPaused()) {
+      process.stdin.resume();
+    }
+    process.stdin.setRawMode(true);
+    process.stdin.once('data', key => {
+      process.stdin.setRawMode(false);
+      process.stdin.pause();
+      resolve(key.toString('utf8'));
+    });
+  });
 };
 
 export const sleepMs = (ms: number) => {

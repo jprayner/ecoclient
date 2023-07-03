@@ -1,4 +1,10 @@
-import { isValidName, isValidWildcardName, isWildcardMatch, parseDirBase, parseFileSpecifier } from './ecopath';
+import {
+  isValidName,
+  isValidWildcardName,
+  isWildcardMatch,
+  parseDirBase,
+  parseFileSpecifier,
+} from './ecopath';
 
 describe('ecopath.isValidName', () => {
   it('should accept valid filenames', () => {
@@ -226,11 +232,15 @@ describe('ecopath.parseDirSpecifier', () => {
   });
 
   it('should throw error on invalid disc name', () => {
-    expect(() => parseFileSpecifier('$MYD;SK.ABC.DEF.GHI')).toThrow('Invalid disc name \'MYD;SK\'');
+    expect(() => parseFileSpecifier('$MYD;SK.ABC.DEF.GHI')).toThrow(
+      "Invalid disc name 'MYD;SK'",
+    );
   });
 
   it('should throw error on invalid path path', () => {
-    expect(() => parseFileSpecifier('$MYDISK.A£C.DEF.GHI')).toThrow('Invalid path part \'A£C\'');
+    expect(() => parseFileSpecifier('$MYDISK.A£C.DEF.GHI')).toThrow(
+      "Invalid path part 'A£C'",
+    );
   });
 });
 

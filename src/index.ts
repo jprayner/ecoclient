@@ -142,10 +142,18 @@ program
   .command('get')
   .description('get file from fileserver using "LOAD" command')
   .argument('<filename>', 'filename')
-  .option('-r, --recurse', 'recurse subdirectories') // TODO
-  .action(async filename => {
+  .option('-r, --recurse', 'recurse subdirectories')
+  .option('-f, --force', 'force overwrite of existing files')
+  .action(async (filename, commandOpts) => {
     const config = await resolveConfig(program.opts());
-    await connectionWrapper(commandGet, config, config.serverStation, filename);
+    await connectionWrapper(
+      commandGet,
+      config,
+      config.serverStation,
+      filename,
+      commandOpts.recurse || false,
+      commandOpts.force || false,
+    );
   });
 
 program

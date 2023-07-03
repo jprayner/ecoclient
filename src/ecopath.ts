@@ -8,6 +8,10 @@ export const isValidWildcardName = (filename: string) => {
   return validFilename.test(filename);
 };
 
+export const isWildcardName = (filename: string) => {
+  return filename.indexOf('*') >= 0 || filename.indexOf('#') >= 0;
+};
+
 const validatePathParts = (pathParts: string[]) => {
   for (const pathPart of pathParts) {
     if (!isValidWildcardName(pathPart)) {
@@ -25,15 +29,17 @@ export const isWildcardMatch = (wildcard: string, filename: string) => {
     throw new Error(`Invalid filename '${filename}'`);
   }
 
-  const regExp = new RegExp(`^${wildcard.replace('*', '.*').replace('#', '.')}$`);
-  return regExp.test(filename);
+  const regExp = new RegExp(
+    `^${wildcard.toLowerCase().replace('*', '.*').replace('#', '.')}$`,
+  );
+  return regExp.test(filename.toLowerCase());
 };
 
 export const parseDirBase = (pathPart: string) => {
   switch (pathPart.charAt(0)) {
     case ':':
     case '$':
-      if (pathPart.length === 1) {  
+      if (pathPart.length === 1) {
         return {
           dirBase: pathPart.charAt(0),
           discName: undefined,
@@ -50,7 +56,7 @@ export const parseDirBase = (pathPart: string) => {
       };
 
     case '@': // relative to current directory
-      // fall-through
+    // fall-through
 
     // eslint-disable-next-line no-fallthrough
     case '&': // relative to user root directory
@@ -71,14 +77,16 @@ export const parseDirBase = (pathPart: string) => {
 };
 
 export type FileSpecifier = {
-  dirBase: string | undefined,
-  discName: string | undefined,
-  pathParts: string[],
-  dirname: string | undefined,
-  basename: string | undefined,
+  dirBase: string | undefined;
+  discName: string | undefined;
+  pathParts: string[];
+  dirname: string | undefined;
+  basename: string | undefined;
 };
 
-export const parseFileSpecifier: (path: string) => FileSpecifier = function (path: string) {
+export const parseFileSpecifier: (path: string) => FileSpecifier = function (
+  path: string,
+) {
   // <directory base> ::= :[<disc name>] || $[<disc name>] || & || @ || ^
   // <directory specifier> ::= [<directory base>.] {<name>. }<name>
 
@@ -94,7 +102,7 @@ export const parseFileSpecifier: (path: string) => FileSpecifier = function (pat
           pathParts: [],
           dirname: parts[0],
           basename: undefined,
-        };  
+        };
       } else {
         return {
           dirBase: undefined,
@@ -102,7 +110,7 @@ export const parseFileSpecifier: (path: string) => FileSpecifier = function (pat
           pathParts: [],
           dirname: undefined,
           basename: parts[0],
-        };  
+        };
       }
 
     case 2:
@@ -123,7 +131,7 @@ export const parseFileSpecifier: (path: string) => FileSpecifier = function (pat
           basename: parts[1],
         };
       }
-  
+
     default:
       if (parseDirBaseResult) {
         return {
