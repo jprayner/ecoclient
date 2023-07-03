@@ -11,6 +11,8 @@ import {
 } from '../ecopath';
 import { examineDir } from '../protocol/examine';
 
+const MAX_RETRIES = 3;
+
 enum FileType {
   File,
   Directory,
@@ -59,7 +61,7 @@ export const commandGet = async (
 
   const isDir = accessInfo.access.includes('D');
   if (!isDir) {
-    await getSingleFile(serverStation, filename, overwriteTracker);
+    await getSingleFileWithRetries(serverStation, filename, overwriteTracker);
     return;
   }
 
@@ -110,8 +112,7 @@ const getMultipleFiles = async (
   const fileMatches = allObjectMatches.filter(f => !f.access.includes('D'));
 
   for (const file of fileMatches) {
-    console.log(`Getting file: ${file.name}`);
-    await getSingleFile(
+    await getSingleFileWithRetries(
       serverStation,
       [dirPath, file.name].join('.'),
       overwriteTracker,
@@ -143,6 +144,27 @@ const getMultipleFiles = async (
           overwriteTracker,
         );
         process.chdir(originalDir);
+      }
+    }
+  }
+};
+
+const getSingleFileWithRetries = async (
+  serverStation: number,
+  srcFilename: string,
+  overwriteTracker: FileOverwriteTracker,
+) => {
+  for (let retry = 0; retry <= MAX_RETRIES; retry++) {
+    console.log(
+      `Getting file: ${srcFilename}` + (retry === 0 ? '' : ` (retry ${retry})`),
+    );
+    try {
+      await getSingleFile(serverStation, srcFilename, overwriteTracker);
+      break;
+    } catch (e) {
+      console.error(e instanceof Error ? e.message : e);
+      if (retry === MAX_RETRIES) {
+        console.error(`Giving up on ${srcFilename}`);
       }
     }
   }
