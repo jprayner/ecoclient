@@ -29,8 +29,8 @@ export const load = async (
     Buffer.from(`${filename}\r`),
   );
 
-  const initQueue = driver.eventQueueCreate(
-    responseMatcher(serverStation, 0, fsControlByte, [replyPort]),
+  const queue = driver.eventQueueCreate(
+    responseMatcher(serverStation, 0, fsControlByte, [dataPort, replyPort]),
   );
 
   let serverReply;
@@ -49,7 +49,7 @@ export const load = async (
     }
 
     serverReply = await waitForReceiveTxEvent(
-      initQueue,
+      queue,
       2000,
       'waiting for LOAD response',
     );
@@ -64,29 +64,21 @@ export const load = async (
         `Malformed response in LOAD from station ${serverStation}: success but not enough data (${serverReply.data.length} bytes received)`,
       );
     }
-  } finally {
-    driver.eventQueueDestroy(initQueue);
-  }
 
-  const loadAddr = serverReply.data.readUInt32LE(0);
-  const execAddr = serverReply.data.readUInt32LE(4);
-  const size =
-    serverReply.data[8] +
-    (serverReply.data[9] << 8) +
-    (serverReply.data[10] << 16);
-  const access = serverReply.data[11];
-  const date = serverReply.data.readUint16LE(12);
-  const actualFilenameData = serverReply.data.subarray(14, 26);
-  const actualFilename =
-    actualFilenameData.length === 0
-      ? filename
-      : parseAsciiString(actualFilenameData).trim();
+    const loadAddr = serverReply.data.readUInt32LE(0);
+    const execAddr = serverReply.data.readUInt32LE(4);
+    const size =
+      serverReply.data[8] +
+      (serverReply.data[9] << 8) +
+      (serverReply.data[10] << 16);
+    const access = serverReply.data[11];
+    const date = serverReply.data.readUint16LE(12);
+    const actualFilenameData = serverReply.data.subarray(14, 26);
+    const actualFilename =
+      actualFilenameData.length === 0
+        ? filename
+        : parseAsciiString(actualFilenameData).trim();
 
-  const queue = driver.eventQueueCreate(
-    responseMatcher(serverStation, 0, fsControlByte, [dataPort, replyPort]),
-  );
-
-  try {
     let data = Buffer.from('');
     let complete = false;
     while (!complete) {
@@ -133,7 +125,6 @@ export const load = async (
               `Malformed data frame from station ${serverStation}`,
             );
           }
-
           data = Buffer.concat([data, rxTransmitEvent.dataFrame.slice(4)]);
           break;
       }
