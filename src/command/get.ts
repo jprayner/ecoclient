@@ -1,6 +1,7 @@
 import * as fs from 'fs';
+import * as path from 'path';
 
-import { getKeyPress, logProgress, saveFileInfo } from '../common';
+import { saveFileInfo } from '../common';
 import { getHandles, getMetadataType } from '../config';
 import { load } from '../protocol/load';
 import { readAccessObjectInfo } from '../protocol/objectInfo';
@@ -10,25 +11,9 @@ import {
   parseFileSpecifier,
 } from '../ecopath';
 import { examineDir } from '../protocol/examine';
+import { FileType, FileOverwriteTracker, promptOverwrite } from '../util/overwriteUtils';
 
 const MAX_RETRIES = 3;
-
-enum FileType {
-  File,
-  Directory,
-}
-
-class FileOverwriteTracker {
-  constructor(private overwriteAll: boolean) {}
-
-  public get isOverwriteAllSelected() {
-    return this.overwriteAll;
-  }
-
-  public selectOverwriteAll() {
-    this.overwriteAll = true;
-  }
-}
 
 export const commandGet = async (
   serverStation: number,
@@ -71,7 +56,7 @@ export const commandGet = async (
 
   const originalDir = process.cwd();
 
-  const dirOverwriteResponse = await promptOverwriteIfNecessary(
+  const dirOverwriteResponse = await promptOverwriteDeleteIfNecessary(
     pathInfo.basename,
     FileType.Directory,
     overwriteTracker,
@@ -114,7 +99,7 @@ const getMultipleFiles = async (
   for (const file of fileMatches) {
     await getSingleFileWithRetries(
       serverStation,
-      [dirPath, file.name].join('.'),
+      dirPath ? `${dirPath}.${file.name}` : file.name,
       overwriteTracker,
     );
   }
@@ -125,7 +110,7 @@ const getMultipleFiles = async (
       console.log(`Getting dir: ${remotePath}`);
       const originalDir = process.cwd();
 
-      const dirOverwriteResponse = await promptOverwriteIfNecessary(
+      const dirOverwriteResponse = await promptOverwriteDeleteIfNecessary(
         dir.name,
         FileType.Directory,
         overwriteTracker,
@@ -177,9 +162,9 @@ const getSingleFile = async (
 ) => {
   const result = await load(serverStation, srcFilename, await getHandles());
   const pathInfo = parseFileSpecifier(result.actualFilename);
-  const localFilename = pathInfo.basename;
+  const actualFilename = pathInfo.basename;
 
-  if (!localFilename) {
+  if (!actualFilename) {
     throw new Error(
       `Unexpected path format in filename returned by server: ${result.actualFilename}`,
     );
@@ -187,23 +172,23 @@ const getSingleFile = async (
 
   switch (await getMetadataType()) {
     case 'inf': {
-      const overwriteMainFileResult = await promptOverwriteIfNecessary(
-        localFilename,
+      const overwriteMainFileResult = await promptOverwriteDeleteIfNecessary(
+        actualFilename,
         FileType.File,
         overwriteTracker,
       );
       if (overwriteMainFileResult !== OverwritePromptResult.Skip) {
-        fs.writeFileSync(localFilename, result.data);
+        fs.writeFileSync(actualFilename, result.data);
       }
 
-      const overwriteInfFileResult = await promptOverwriteIfNecessary(
-        `${localFilename}.inf`,
+      const overwriteInfFileResult = await promptOverwriteDeleteIfNecessary(
+        `${actualFilename}.inf`,
         FileType.File,
         overwriteTracker,
       );
       if (overwriteInfFileResult !== OverwritePromptResult.Skip) {
-        saveFileInfo(localFilename, {
-          originalFilename: result.actualFilename,
+        saveFileInfo(actualFilename, {
+          originalFilename: actualFilename,
           loadAddr: result.loadAddr,
           execAddr: result.execAddr,
         });
@@ -221,9 +206,9 @@ const getSingleFile = async (
         .toString(16)
         .toUpperCase()
         .padStart(8, '0');
-      const filenameWithAddrs = `${localFilename},${loadAddr},${execAddr}`;
+      const filenameWithAddrs = `${actualFilename},${loadAddr},${execAddr}`;
 
-      const overwriteInfFileResult = await promptOverwriteIfNecessary(
+      const overwriteInfFileResult = await promptOverwriteDeleteIfNecessary(
         filenameWithAddrs,
         FileType.File,
         overwriteTracker,
@@ -235,14 +220,14 @@ const getSingleFile = async (
     }
 
     default: {
-      const overwritePlainFileResult = await promptOverwriteIfNecessary(
-        localFilename,
+      const overwritePlainFileResult = await promptOverwriteDeleteIfNecessary(
+        actualFilename,
         FileType.File,
         overwriteTracker,
       );
       if (overwritePlainFileResult !== OverwritePromptResult.Skip) {
-        console.log(`writing to ${localFilename}`);
-        fs.writeFileSync(localFilename, result.data);
+        console.log(`writing to ${actualFilename}`);
+        fs.writeFileSync(actualFilename, result.data);
       }
       break;
     }
@@ -255,7 +240,7 @@ enum OverwritePromptResult {
   DirExists,
 }
 
-const promptOverwriteIfNecessary = async (
+const promptOverwriteDeleteIfNecessary = async (
   localFilename: string,
   newFileType: FileType,
   overwriteTracker: FileOverwriteTracker,
@@ -271,44 +256,10 @@ const promptOverwriteIfNecessary = async (
     return OverwritePromptResult.DirExists;
   }
 
-  if (overwriteTracker.isOverwriteAllSelected) {
+  if (await promptOverwrite(localFilename, overwriteTracker)) {
     fs.rmSync(localFilename, { recursive: true, force: true });
     return OverwritePromptResult.Continue;
-  }
-
-  if (!process.stdin.isTTY) {
-    console.error(`File already exists: ${localFilename}`);
-    process.exit(1);
-  }
-
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    logProgress(
-      `File ${localFilename} will be overwritten, OK? [Y]es/[A]ll/[S]kip/[Q]uit]`,
-    );
-
-    const key = await getKeyPress();
-    logProgress('');
-    switch (key) {
-      case 'y':
-      case 'Y':
-        fs.rmSync(localFilename, { recursive: true, force: true });
-        return OverwritePromptResult.Continue;
-        break;
-      case 'a':
-      case 'A':
-        fs.rmSync(localFilename, { recursive: true, force: true });
-        overwriteTracker.selectOverwriteAll();
-        return OverwritePromptResult.Continue;
-        break;
-      case 's':
-      case 'S':
-        return OverwritePromptResult.Skip;
-        break;
-      case 'q':
-      case 'Q':
-        logProgress('');
-        process.exit(1);
-    }
+  } else {
+    return OverwritePromptResult.Skip;
   }
 };

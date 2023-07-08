@@ -160,9 +160,18 @@ program
   .command('put')
   .description('put file to fileserver using "SAVE" command')
   .argument('<filename>', 'filename')
-  .action(async filename => {
+  .option('-r, --recurse', 'recurse subdirectories')
+  .option('-f, --force', 'force overwrite of existing files')
+  .action(async (filename, commandOpts) => {
     const config = await resolveConfig(program.opts());
-    await connectionWrapper(commandPut, config, config.serverStation, filename);
+    await connectionWrapper(
+      commandPut,
+      config,
+      config.serverStation,
+      filename,
+      commandOpts.recurse || false,
+      commandOpts.force || false,
+      );
   });
 
 program
