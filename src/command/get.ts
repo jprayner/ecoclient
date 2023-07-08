@@ -1,5 +1,4 @@
 import * as fs from 'fs';
-import * as path from 'path';
 
 import { saveFileInfo } from '../common';
 import { getHandles, getMetadataType } from '../config';
@@ -11,7 +10,11 @@ import {
   parseFileSpecifier,
 } from '../ecopath';
 import { examineDir } from '../protocol/examine';
-import { FileType, FileOverwriteTracker, promptOverwrite } from '../util/overwriteUtils';
+import {
+  FileType,
+  FileOverwriteTracker,
+  promptOverwrite,
+} from '../util/overwriteUtils';
 
 const MAX_RETRIES = 3;
 

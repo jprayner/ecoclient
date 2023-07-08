@@ -171,7 +171,7 @@ program
       filename,
       commandOpts.recurse || false,
       commandOpts.force || false,
-      );
+    );
   });
 
 program

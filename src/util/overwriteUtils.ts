@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import { getKeyPress, logProgress } from '../common';
 
 export enum FileType {

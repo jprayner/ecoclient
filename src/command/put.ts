@@ -6,7 +6,11 @@ import { getHandles } from '../config';
 import { readAccessObjectInfo } from '../protocol/objectInfo';
 import { isValidName } from '../ecopath';
 import { cdir, deleteFile } from '../protocol/simpleCli';
-import { FileOverwriteTracker, FileType, promptOverwrite } from '../util/overwriteUtils';
+import {
+  FileOverwriteTracker,
+  FileType,
+  promptOverwrite,
+} from '../util/overwriteUtils';
 
 const MAX_RETRIES = 3;
 
@@ -18,10 +22,11 @@ const isWildcardMatch = (filename: string, pattern: string) => {
 };
 
 const putSingleFileWithRetries = async (
-    serverStation: number,
-    localFilePath: string,
-    remoteDir: string,
-    overwriteTracker: FileOverwriteTracker) => {
+  serverStation: number,
+  localFilePath: string,
+  remoteDir: string,
+  overwriteTracker: FileOverwriteTracker,
+) => {
   if (path.extname(localFilePath).toLowerCase() === '.inf') {
     // silently skip .inf files
     return;
@@ -32,14 +37,24 @@ const putSingleFileWithRetries = async (
   }
 
   console.log(`Putting file ${localFilePath}...`);
-  const remoteFilePath = remoteDir ? `${remoteDir}.${path.basename(localFilePath)}` : path.basename(localFilePath);
-  if (await promptOverwriteDeleteIfNecessary(serverStation, remoteFilePath, FileType.File, overwriteTracker) === OverwritePromptResult.Skip) {
+  const remoteFilePath = remoteDir
+    ? `${remoteDir}.${path.basename(localFilePath)}`
+    : path.basename(localFilePath);
+  if (
+    (await promptOverwriteDeleteIfNecessary(
+      serverStation,
+      remoteFilePath,
+      FileType.File,
+      overwriteTracker,
+    )) === OverwritePromptResult.Skip
+  ) {
     return;
   }
 
   for (let retry = 0; retry <= MAX_RETRIES; retry++) {
     console.log(
-      `Putting file: ${localFilePath}` + (retry === 0 ? '' : ` (retry ${retry})`),
+      `Putting file: ${localFilePath}` +
+        (retry === 0 ? '' : ` (retry ${retry})`),
     );
     try {
       await putSingleFile(serverStation, localFilePath, remoteDir);
@@ -60,10 +75,13 @@ const putSingleFile = async (
 ) => {
   const parsedLocalFilePath = path.parse(path.normalize(localFilePath));
   const fileInfo =
-    fileInfoFromFilename(parsedLocalFilePath.base) || loadFileInfo(localFilePath);
+    fileInfoFromFilename(parsedLocalFilePath.base) ||
+    loadFileInfo(localFilePath);
   const fileData = fs.readFileSync(localFilePath);
   const remoteFileBase = fileInfo?.originalFilename || parsedLocalFilePath.base;
-  const remoteFilePath = remoteDir ? `${remoteDir}.${remoteFileBase}` : remoteFileBase;
+  const remoteFilePath = remoteDir
+    ? `${remoteDir}.${remoteFileBase}`
+    : remoteFileBase;
   await save(
     serverStation,
     fileData,
@@ -75,12 +93,13 @@ const putSingleFile = async (
 };
 
 const putMultipleFiles = async (
-    serverStation: number,
-    localDirPath: string,
-    filenameExpression: string,
-    remotePath: string,
-    recurse: boolean,
-    overwriteTracker: FileOverwriteTracker) => {
+  serverStation: number,
+  localDirPath: string,
+  filenameExpression: string,
+  remotePath: string,
+  recurse: boolean,
+  overwriteTracker: FileOverwriteTracker,
+) => {
   if (!fs.existsSync(localDirPath)) {
     throw new Error(`Directory not found: ${localDirPath}`);
   }
@@ -90,13 +109,13 @@ const putMultipleFiles = async (
 
   const dirEntries = fs.readdirSync(localDirPath, { withFileTypes: true });
   const dirNames = dirEntries
-    .filter((e) => e.isDirectory())
-    .map((e) => e.name)
-    .filter((n) => isWildcardMatch(n, filenameExpression));
+    .filter(e => e.isDirectory())
+    .map(e => e.name)
+    .filter(n => isWildcardMatch(n, filenameExpression));
   const fileNames = dirEntries
-    .filter((e) => e.isFile())
-    .map((e) => e.name)
-    .filter((n) => isWildcardMatch(n, filenameExpression));
+    .filter(e => e.isFile())
+    .map(e => e.name)
+    .filter(n => isWildcardMatch(n, filenameExpression));
   console.log(`dirNames: ${JSON.stringify(dirNames, null, 4)}`);
   console.log(`fileNames: ${JSON.stringify(fileNames, null, 4)}`);
 
@@ -121,7 +140,8 @@ const putMultipleFiles = async (
       serverStation,
       path.join(localDirPath, fileName),
       remotePath,
-      overwriteTracker);
+      overwriteTracker,
+    );
   }
 
   if (!recurse) {
@@ -139,7 +159,14 @@ const putMultipleFiles = async (
 
     console.log(`Creating directory '${dirName}'...`);
 
-    if (await promptOverwriteDeleteIfNecessary(serverStation, remoteSubdirPath, FileType.Directory, overwriteTracker) === OverwritePromptResult.Skip) {
+    if (
+      (await promptOverwriteDeleteIfNecessary(
+        serverStation,
+        remoteSubdirPath,
+        FileType.Directory,
+        overwriteTracker,
+      )) === OverwritePromptResult.Skip
+    ) {
       continue;
     }
 
@@ -151,7 +178,8 @@ const putMultipleFiles = async (
       '*',
       remoteSubdirPath,
       recurse,
-      overwriteTracker);
+      overwriteTracker,
+    );
   }
 };
 
@@ -159,7 +187,8 @@ export const commandPut = async (
   serverStation: number,
   localPath: string,
   recurse: boolean,
-  force: boolean) => {
+  force: boolean,
+) => {
   const overwriteTracker = new FileOverwriteTracker(force);
 
   const parsedPath = path.parse(path.normalize(localPath));
@@ -171,7 +200,8 @@ export const commandPut = async (
       parsedPath.name,
       '',
       recurse,
-      overwriteTracker);
+      overwriteTracker,
+    );
     return;
   }
 
@@ -186,10 +216,19 @@ export const commandPut = async (
     }
 
     if (!isValidName(parsedPath.base)) {
-      throw new Error(`Directory '${parsedPath.base}' is not a valid Econet filename`);
+      throw new Error(
+        `Directory '${parsedPath.base}' is not a valid Econet filename`,
+      );
     }
 
-    switch (await promptOverwriteDeleteIfNecessary(serverStation, remoteDir, FileType.Directory, overwriteTracker)) {
+    switch (
+      await promptOverwriteDeleteIfNecessary(
+        serverStation,
+        remoteDir,
+        FileType.Directory,
+        overwriteTracker,
+      )
+    ) {
       case OverwritePromptResult.Skip:
         return;
       case OverwritePromptResult.Continue:
@@ -205,13 +244,18 @@ export const commandPut = async (
       '*',
       remoteDir,
       recurse,
-      overwriteTracker);
+      overwriteTracker,
+    );
     return;
   }
 
-  await putSingleFileWithRetries(serverStation, localPath, '', overwriteTracker);
+  await putSingleFileWithRetries(
+    serverStation,
+    localPath,
+    '',
+    overwriteTracker,
+  );
 };
-
 
 enum OverwritePromptResult {
   Continue,
@@ -234,10 +278,7 @@ const promptOverwriteDeleteIfNecessary = async (
     return OverwritePromptResult.Continue;
   }
 
-  if (
-    newFileType === FileType.Directory &&
-    accessInfo.access.includes('D')
-  ) {
+  if (newFileType === FileType.Directory && accessInfo.access.includes('D')) {
     return OverwritePromptResult.DirExists;
   }
 
