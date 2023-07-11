@@ -116,8 +116,6 @@ const putMultipleFiles = async (
     .filter(e => e.isFile())
     .map(e => e.name)
     .filter(n => isWildcardMatch(n, filenameExpression));
-  console.log(`dirNames: ${JSON.stringify(dirNames, null, 4)}`);
-  console.log(`fileNames: ${JSON.stringify(fileNames, null, 4)}`);
 
   if (remotePath) {
     const accessInfo = await readAccessObjectInfo(
@@ -150,27 +148,27 @@ const putMultipleFiles = async (
 
   for (const dirName of dirNames) {
     const localSubdirPath = path.join(localDirPath, dirName);
-    const remoteSubdirPath = [remotePath, dirName].join('.');
+    const remoteSubdirPath = remotePath ? [remotePath, dirName].join('.') : dirName;
 
     if (!isValidName(dirName)) {
       console.log(`Skipping '${dirName}' (not a valid Econet filename)`);
       continue;
     }
 
-    console.log(`Creating directory '${dirName}'...`);
-
-    if (
-      (await promptOverwriteDeleteIfNecessary(
+    switch (await promptOverwriteDeleteIfNecessary(
         serverStation,
         remoteSubdirPath,
         FileType.Directory,
         overwriteTracker,
-      )) === OverwritePromptResult.Skip
-    ) {
+      )) {
+    case OverwritePromptResult.Skip:
       continue;
+    case OverwritePromptResult.Continue:
+      await cdir(serverStation, remoteSubdirPath, await getHandles());
+      break;
+    case OverwritePromptResult.DirExists:
+      break;
     }
-
-    await cdir(serverStation, remoteSubdirPath, await getHandles());
 
     await putMultipleFiles(
       serverStation,
