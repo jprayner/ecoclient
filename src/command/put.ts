@@ -36,7 +36,6 @@ const putSingleFileWithRetries = async (
     return;
   }
 
-  console.log(`Putting file ${localFilePath}...`);
   const remoteFilePath = remoteDir
     ? `${remoteDir}.${path.basename(localFilePath)}`
     : path.basename(localFilePath);
@@ -281,7 +280,6 @@ const promptOverwriteDeleteIfNecessary = async (
   }
 
   if (await promptOverwrite(remotePath, overwriteTracker)) {
-    console.log(`Deleting existing file ${remotePath}...`);
     await deleteFile(serverStation, remotePath, await getHandles());
     return OverwritePromptResult.Continue;
   } else {
