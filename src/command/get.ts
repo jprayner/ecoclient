@@ -107,32 +107,34 @@ const getMultipleFiles = async (
     );
   }
 
-  if (recurse) {
-    for (const dir of dirMatches) {
-      const remotePath = `${dirPath}.${dir.name}`;
-      console.log(`Getting dir: ${remotePath}`);
-      const originalDir = process.cwd();
+  if (!recurse) {
+    return;
+  }
 
-      const dirOverwriteResponse = await promptOverwriteDeleteIfNecessary(
-        dir.name,
-        FileType.Directory,
+  for (const dir of dirMatches) {
+    const remotePath = `${dirPath}.${dir.name}`;
+    console.log(`Getting dir: ${remotePath}`);
+    const originalDir = process.cwd();
+
+    const dirOverwriteResponse = await promptOverwriteDeleteIfNecessary(
+      dir.name,
+      FileType.Directory,
+      overwriteTracker,
+    );
+    if (dirOverwriteResponse !== OverwritePromptResult.Skip) {
+      if (dirOverwriteResponse !== OverwritePromptResult.DirExists) {
+        fs.mkdirSync(dir.name);
+      }
+
+      process.chdir(dir.name);
+      await getMultipleFiles(
+        serverStation,
+        remotePath,
+        '*',
+        recurse,
         overwriteTracker,
       );
-      if (dirOverwriteResponse !== OverwritePromptResult.Skip) {
-        if (dirOverwriteResponse !== OverwritePromptResult.DirExists) {
-          fs.mkdirSync(dir.name);
-        }
-
-        process.chdir(dir.name);
-        await getMultipleFiles(
-          serverStation,
-          remotePath,
-          '*',
-          recurse,
-          overwriteTracker,
-        );
-        process.chdir(originalDir);
-      }
+      process.chdir(originalDir);
     }
   }
 };
