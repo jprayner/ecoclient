@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import { existsSync, mkdirSync, writeFileSync, lstatSync, rmSync } from 'fs';
 
 import { saveFileInfo } from '../common';
 import { getHandles, getMetadataType } from '../config';
@@ -66,7 +66,7 @@ export const commandGet = async (
   );
   if (dirOverwriteResponse !== OverwritePromptResult.Skip) {
     if (dirOverwriteResponse !== OverwritePromptResult.DirExists) {
-      fs.mkdirSync(pathInfo.basename);
+      mkdirSync(pathInfo.basename);
     }
 
     process.chdir(pathInfo.basename);
@@ -112,7 +112,7 @@ const getMultipleFiles = async (
   }
 
   for (const dir of dirMatches) {
-    const remotePath = `${dirPath}.${dir.name}`;
+    const remotePath = dirPath ? `${dirPath}.${dir.name}` : dir.name;
     console.log(`Getting dir: ${remotePath}`);
     const originalDir = process.cwd();
 
@@ -123,7 +123,7 @@ const getMultipleFiles = async (
     );
     if (dirOverwriteResponse !== OverwritePromptResult.Skip) {
       if (dirOverwriteResponse !== OverwritePromptResult.DirExists) {
-        fs.mkdirSync(dir.name);
+        mkdirSync(dir.name);
       }
 
       process.chdir(dir.name);
@@ -183,7 +183,7 @@ const getSingleFile = async (
         overwriteTracker,
       );
       if (overwriteMainFileResult !== OverwritePromptResult.Skip) {
-        fs.writeFileSync(actualFilename, result.data);
+        writeFileSync(actualFilename, result.data);
       }
 
       const overwriteInfFileResult = await promptOverwriteDeleteIfNecessary(
@@ -207,7 +207,7 @@ const getSingleFile = async (
         .toString(16)
         .toUpperCase()
         .padStart(8, '0');
-      const execAddr = result.loadAddr
+      const execAddr = result.execAddr
         .toString(16)
         .toUpperCase()
         .padStart(8, '0');
@@ -219,7 +219,7 @@ const getSingleFile = async (
         overwriteTracker,
       );
       if (overwriteInfFileResult !== OverwritePromptResult.Skip) {
-        fs.writeFileSync(filenameWithAddrs, result.data);
+        writeFileSync(filenameWithAddrs, result.data);
       }
       break;
     }
@@ -232,7 +232,7 @@ const getSingleFile = async (
       );
       if (overwritePlainFileResult !== OverwritePromptResult.Skip) {
         console.log(`writing to ${actualFilename}`);
-        fs.writeFileSync(actualFilename, result.data);
+        writeFileSync(actualFilename, result.data);
       }
       break;
     }
@@ -250,19 +250,19 @@ const promptOverwriteDeleteIfNecessary = async (
   newFileType: FileType,
   overwriteTracker: FileOverwriteTracker,
 ) => {
-  if (!fs.existsSync(localFilename)) {
+  if (!existsSync(localFilename)) {
     return OverwritePromptResult.Continue;
   }
 
   if (
     newFileType === FileType.Directory &&
-    fs.lstatSync(localFilename).isDirectory()
+    lstatSync(localFilename).isDirectory()
   ) {
     return OverwritePromptResult.DirExists;
   }
 
   if (await promptOverwrite(localFilename, overwriteTracker)) {
-    fs.rmSync(localFilename, { recursive: true, force: true });
+    rmSync(localFilename, { recursive: true, force: true });
     return OverwritePromptResult.Continue;
   } else {
     return OverwritePromptResult.Skip;
