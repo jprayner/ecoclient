@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { fileInfoFromFilename, loadFileInfo } from '../common';
+import { fileInfoFromFilename, isLoadExecFilename, loadFileInfo } from '../common';
 import { save } from '../protocol/save';
 import { getHandles } from '../config';
 import { readAccessObjectInfo } from '../protocol/objectInfo';
@@ -191,8 +191,10 @@ const putSingleFileWithRetries = async (
     // silently skip .inf files
     return;
   }
-  if (!isValidName(path.basename(localFilePath))) {
-    console.log(`Skipping '${localFilePath}' (not a valid Econet filename)`);
+  const isValidFilename = isValidName(path.basename(localFilePath));
+  const isValidLoadExecFilename = isLoadExecFilename(path.basename(localFilePath));
+  if (!isValidFilename && !isValidLoadExecFilename) {
+    console.log(`Skipping2 '${localFilePath}' (not a valid Econet filename)`);
     return;
   }
 
