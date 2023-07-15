@@ -128,6 +128,7 @@ export const save = async (
       }
 
       if (dataLeftToSend.length > 0) {
+        // TODO: errr.... is there no way for this to fail i.e. nak?
         await driver.eventQueueWait(ackQueue, 10000, 'data ack');
       }
 

@@ -1,7 +1,11 @@
 import { readAccessObjectInfo } from '../protocol/objectInfo';
 import { save } from '../protocol/save';
 import { getHandles } from '../config';
-import { loadFileInfo, isLoadExecFilename, fileInfoFromFilename } from '../common';
+import {
+  loadFileInfo,
+  isLoadExecFilename,
+  fileInfoFromFilename,
+} from '../common';
 import * as fs from 'fs';
 import { commandPut } from './put';
 import { promptOverwrite } from '../util/overwriteUtils';
@@ -225,7 +229,8 @@ describe('commandPut', () => {
           isSocket: () => false,
           isSymbolicLink: () => false,
           name: 'MYFILE1',
-        }, {
+        },
+        {
           isFile: () => true,
           isDirectory: () => false,
           isBlockDevice: () => false,
@@ -234,7 +239,8 @@ describe('commandPut', () => {
           isSocket: () => false,
           isSymbolicLink: () => false,
           name: 'MYFILE2',
-        }, {
+        },
+        {
           isFile: () => true,
           isDirectory: () => false,
           isBlockDevice: () => false,
@@ -291,7 +297,7 @@ describe('commandPut', () => {
       });
 
       jest.spyOn(fs, 'existsSync').mockImplementation(() => true);
-      jest.spyOn(fs, 'readdirSync').mockImplementation((path) => {
+      jest.spyOn(fs, 'readdirSync').mockImplementation(path => {
         if (path.toString().includes('MYDIR')) {
           return [
             {
@@ -323,9 +329,11 @@ describe('commandPut', () => {
       mockLstat(['MYFILE1', 'MYFILE2']);
 
       readAccessObjectInfoMock.mockImplementation((serverStation, filepath) => {
-        return Promise.resolve(filepath.toString() === 'MYDIR'
-          ? { fileExists: true, access: 'DWR/R' }
-          : { fileExists: false, access: null });
+        return Promise.resolve(
+          filepath.toString() === 'MYDIR'
+            ? { fileExists: true, access: 'DWR/R' }
+            : { fileExists: false, access: null },
+        );
       });
       jest
         .spyOn(fs, 'readFileSync')
@@ -367,7 +375,8 @@ describe('commandPut', () => {
           isSocket: () => false,
           isSymbolicLink: () => false,
           name: 'MYFILE1',
-        }, {
+        },
+        {
           isFile: () => true,
           isDirectory: () => false,
           isBlockDevice: () => false,
@@ -381,9 +390,11 @@ describe('commandPut', () => {
       mockLstat(['MYFILE1', 'MYFILE2']);
 
       readAccessObjectInfoMock.mockImplementation((serverStation, filepath) => {
-        return Promise.resolve(filepath.toString() === 'MYDIR'
-          ? { fileExists: true, access: 'DWR/R' }
-          : { fileExists: false, access: null });
+        return Promise.resolve(
+          filepath.toString() === 'MYDIR'
+            ? { fileExists: true, access: 'DWR/R' }
+            : { fileExists: false, access: null },
+        );
       });
       jest
         .spyOn(fs, 'readFileSync')
@@ -420,7 +431,7 @@ describe('commandPut', () => {
 });
 
 const mockLstat = (filePaths: string[]) => {
-  jest.spyOn(fs, 'lstatSync').mockImplementation((path) => {
+  jest.spyOn(fs, 'lstatSync').mockImplementation(path => {
     return {
       isFile: () => filePaths.includes(path.toString()),
       isBlockDevice: () => false,
