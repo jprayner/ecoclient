@@ -1,5 +1,17 @@
 # CHANGELOG.md
 
+## 2.0.13 (2023-07-16)
+
+Fixes:
+
+- Fix failure to fetch small files in some circumstances (<1 block)
+- Cope with 6-digit load/execution addresses a la BeebEm (thanks KenLowe!)
+- Don't include path in .inf files when GETting
+
+Features:
+
+- ISS-6 Add recursive GET/PUT
+
 ## 2.0.12 (2023-06-17)
 
 Fixes:
