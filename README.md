@@ -164,7 +164,7 @@ Examples:
 ```
 ecoclient put MyFile
 ecoclient put 'My*'
-ecoclient put $.Games.MyFile
+ecoclient put Games/MyFile
 ecoclient put -r MyDir
 ecoclient put -rf MyDir
 ```
