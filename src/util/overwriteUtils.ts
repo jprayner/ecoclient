@@ -20,7 +20,7 @@ export const promptOverwrite = async (
 
   if (!process.stdin.isTTY) {
     console.error(`File already exists: ${filename}`);
-    process.exit(1);
+    return false;
   }
 
   // eslint-disable-next-line no-constant-condition
