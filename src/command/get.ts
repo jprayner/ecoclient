@@ -107,12 +107,14 @@ const getMultipleFiles = async (
     );
   }
 
-  if (!recurse) {
-    return;
-  }
-
   for (const dir of dirMatches) {
     const remotePath = dirPath ? `${dirPath}.${dir.name}` : dir.name;
+
+    if (!recurse) {
+      console.log(`Skipping dir: ${remotePath} (specify -r to recurse)`);
+      continue;
+    }
+
     console.log(`Getting dir: ${remotePath}`);
     const originalDir = process.cwd();
 

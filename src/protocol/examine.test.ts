@@ -1,11 +1,9 @@
-import { driver, RxTransmitEvent } from '@jprayner/piconet-nodejs';
+import { driver } from '@jprayner/piconet-nodejs';
 import * as common from '../common';
 import { examineDir } from './examine';
 
 const replyPort = 0x90;
-const functionCode = 0x03;
 const successResultCode = 0;
-const errorResultCode = 1;
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-return
 jest.mock('../common', () => ({
@@ -19,7 +17,7 @@ describe('examine protocol handler', () => {
   });
 
   it('should successfully examine directory', async () => {
-    const transmitSpy = jest.spyOn(driver, 'transmit').mockResolvedValue({
+    jest.spyOn(driver, 'transmit').mockResolvedValue({
       success: true,
       description: 'OK',
     });

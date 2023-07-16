@@ -137,7 +137,7 @@ describe('objectInfo protocol handler', () => {
       waitForReceiveTxEventMock.mockImplementation(
         async (queue: driver.EventQueue, serverStation: number) => {
           const data = Buffer.from([
-            0x01,               // file exists
+            0x01, // file exists
             0x08 | 0x04 | 0x01, // WR/R
             0x00,
           ]);

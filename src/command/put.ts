@@ -31,7 +31,7 @@ export const commandPut = async (
   if (parsedPath.name.includes('*') || parsedPath.name.includes('?')) {
     await putMultipleFiles(
       serverStation,
-      parsedPath.dir || process.cwd(),
+      parsedPath.dir || '.',
       parsedPath.name,
       '',
       recurse,
@@ -142,18 +142,22 @@ const putMultipleFiles = async (
     );
   }
 
-  if (!recurse) {
-    return;
-  }
-
   for (const dirName of dirNames) {
     const localSubdirPath = path.join(localDirPath, dirName);
+
+    if (!recurse) {
+      console.log(`Skipping dir: ${localDirPath} (specify -r to recurse)`);
+      continue;
+    }
+
+    console.log(`Putting dir: ${localSubdirPath}`);
+
     const remoteSubdirPath = remotePath
       ? [remotePath, dirName].join('.')
       : dirName;
 
     if (!isValidName(dirName)) {
-      console.log(`Skipping '${dirName}' (not a valid Econet filename)`);
+      console.log(`Skipping dir: '${dirName}' (not a valid Econet filename)`);
       continue;
     }
 
@@ -204,25 +208,32 @@ const putSingleFileWithRetries = async (
     return;
   }
 
+  const fileInfo =
+    fileInfoFromFilename(path.basename(localFilePath)) ||
+    loadFileInfo(localFilePath);
+  const remoteFilename =
+    fileInfo?.originalFilename || path.basename(localFilePath);
   const remoteFilePath = remoteDir
-    ? `${remoteDir}.${path.basename(localFilePath)}`
-    : path.basename(localFilePath);
-  if (
-    (await promptOverwriteDeleteIfNecessary(
-      serverStation,
-      remoteFilePath,
-      FileType.File,
-      overwriteTracker,
-    )) === OverwritePromptResult.Skip
-  ) {
-    return;
-  }
+    ? `${remoteDir}.${remoteFilename}`
+    : remoteFilename;
 
   for (let retry = 0; retry <= MAX_RETRIES; retry++) {
     console.log(
       `Putting file: ${localFilePath}` +
         (retry === 0 ? '' : ` (retry ${retry})`),
     );
+
+    if (
+      (await promptOverwriteDeleteIfNecessary(
+        serverStation,
+        remoteFilePath,
+        FileType.File,
+        overwriteTracker,
+      )) === OverwritePromptResult.Skip
+    ) {
+      return;
+    }
+
     try {
       await putSingleFile(serverStation, localFilePath, remoteDir);
       break;

@@ -205,15 +205,17 @@ export const loadFileInfo = (localFilename: string): FileInfo | undefined => {
   }
 
   const rawLoadAddr = parseInt(infoParts[1], 16);
-  const inferredLoadAddr = infoParts[1].length === 6 && ((rawLoadAddr & 0xff0000) === 0xff0000)
-    ? (rawLoadAddr | 0xff000000) >>> 0
-    : rawLoadAddr;
+  const inferredLoadAddr =
+    infoParts[1].length === 6 && (rawLoadAddr & 0xff0000) === 0xff0000
+      ? (rawLoadAddr | 0xff000000) >>> 0
+      : rawLoadAddr;
 
   const rawExecAddr = parseInt(infoParts[2], 16);
-  const inferredExecAddr = infoParts[2].length === 6 && ((rawExecAddr & 0xff0000) === 0xff0000)
-    ? (rawExecAddr | 0xff000000) >>> 0
-    : rawExecAddr;
-  
+  const inferredExecAddr =
+    infoParts[2].length === 6 && (rawExecAddr & 0xff0000) === 0xff0000
+      ? (rawExecAddr | 0xff000000) >>> 0
+      : rawExecAddr;
+
   return {
     originalFilename: infoParts[0],
     loadAddr: inferredLoadAddr,

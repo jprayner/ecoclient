@@ -40,7 +40,7 @@ Sets the fileserver station number. Defaults to 254.
 | -------- | ---------------------------------------- |
 | station  | Fileserver station number in range 1-254 |
 
-Exmaple:
+Example:
 
 ```
 ecoclient set-fs 1
@@ -54,7 +54,7 @@ Sets the local station number. Must be configured before using other commands (e
 | -------- | ----------------------------------- |
 | station  | Local station number in range 1-254 |
 
-Exmaple:
+Example:
 
 ```
 ecoclient set-station 32
@@ -73,7 +73,7 @@ Sends a notification message to a station like a `*NOTIFY` command.
 
 Listen for network traffic like a "*NETMON" command. However, better than `*NETMON`, this command will dump _every single_ byte of a packet.
 
-Exmaple:
+Example:
 
 ```
 ecoclient monitor
@@ -88,7 +88,7 @@ Login to fileserver like a `*I AM` command. Directory handles (e.g. current dire
 | username | Username registered known to the fileserver |
 | password | Password which corresponds to `username`    |
 
-Exmaple:
+Example:
 
 ```
 ecoclient i-am JPR93 MYPASS
@@ -98,7 +98,7 @@ ecoclient i-am JPR93 MYPASS
 
 Logout of the fileserver like a `*BYE` command.
 
-Exmaple:
+Example:
 
 ```
 ecoclient bye
@@ -112,7 +112,7 @@ Change current directory on fileserver like a `*DIR` command. Directory handles 
 | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | dir      | New directory on fileserver. May be relative to current directory, prefixed with `$.` to change to a directory relative to the root etc. Omit to change to home directory. |
 
-Exmaples:
+Examples:
 
 ```
 ecoclient dir $.Library
@@ -121,32 +121,52 @@ ecoclient dir subdir
 
 ## get [filename]
 
-Download the specified file to the current directory of the local host. Creates a `.inf` file containing the load and execution addresses so that these are preserved when uploading e.g. with a `put` command.
+Download the specified file(s) to the current directory of the local host. Load and execution addresses are optionally persisted in the local filename or an `.inf` file (see `set-metadata` command).
+
+The `*` wildcard matches multiple characters whereas the `?` wildcard matches a single character. Use the recurse option to copy directories.
+
+| Option            | Description                                                    |
+| ----------------- | -------------------------------------------------------------- |
+| `--recurse`, `-r` | Recurse into matching directories.                             |
+| `--force`, `-f`   | Force overwrite of pre-existing local files without prompting. |
 
 | Argument | Description                                                                                                        |
 | -------- | ------------------------------------------------------------------------------------------------------------------ |
 | filename | Name of remote file. May be relative to current directory or prefixed with `$.` if relative to the root directory. |
 
-Exmaples:
+Examples:
 
 ```
 ecoclient get MyFile
+ecoclient get 'My*'
 ecoclient get $.Games.MyFile
+ecoclient get -r MyDir
+ecoclient get -rf MyDir
 ```
 
 ## put [filename]
 
-Upload the specified file from the host machine to the current directory on the server. Observes any corresponding `.inf` file, setting the load and execution addresses accordingly.
+Upload the specified file(s) from the host machine to the current directory on the server. Sets load/execution addresses if embedded in filename or found in a corresponding `.inf` file (see `set-metadata` command).
+
+The `*` wildcard matches multiple characters whereas the `?` wildcard matches a single character. Use the recurse option to copy directories.
+
+| Option            | Description                                                     |
+| ----------------- | --------------------------------------------------------------- |
+| `--recurse`, `-r` | Recurse into matching directories.                              |
+| `--force`, `-f`   | Force overwrite of pre-existing remote files without prompting. |
 
 | Argument | Description         |
 | -------- | ------------------- |
 | filename | Name of local file. |
 
-Exmaples:
+Examples:
 
 ```
 ecoclient put MyFile
+ecoclient put 'My*'
 ecoclient put $.Games.MyFile
+ecoclient put -r MyDir
+ecoclient put -rf MyDir
 ```
 
 ## load [filename]
@@ -159,7 +179,7 @@ Assumes `basictool` is on the local machine's PATH.
 | -------- | ------------------------------------------------------------------------------------------------------------------ |
 | filename | Name of remote file. May be relative to current directory or prefixed with `$.` if relative to the root directory. |
 
-Exmaples:
+Examples:
 
 ```
 ecoclient load Menu
@@ -177,7 +197,7 @@ Assumes `basictool` is on the local machine's PATH.
 | localPath           | Path to local file.                                                        |
 | [optional] destPath | Path to remote file. If ommitted, taken from filename in local `.inf` file |
 
-Exmaples:
+Examples:
 
 ```
 ecoclient save Menu
@@ -192,7 +212,7 @@ Provides a file listing for the specified directory.
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [optional] dirPath | Directory path: may be relative to the current directory or prefixed with `$.` to list a directory relative to the fileserver root. If ommitted, lists the current directory. |
 
-Exmaples:
+Examples:
 
 ```
 ecoclient cat Subdir
@@ -207,7 +227,7 @@ Creates a directory.
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | dirPath  | Directory path: may be relative to the current directory or prefixed with `$.` to create a directory relative to the fileserver root. |
 
-Exmaples:
+Examples:
 
 ```
 ecoclient cdir Subdir
@@ -222,7 +242,7 @@ Deletes a file or directory.
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | path     | File or directory path: may be relative to the current directory or prefixed with `$.` to delete a directory relative to the fileserver root. |
 
-Exmaples:
+Examples:
 
 ```
 ecoclient delete MyFile
@@ -238,7 +258,7 @@ Set access rights for a file on the fileserver.
 | path         | File or directory path: may be relative to the current directory or prefixed with `$.` to delete a directory relative to the fileserver root. |
 | accessString | An Econet access string e.g. `WR/R`                                                                                                           |
 
-Exmaples:
+Examples:
 
 ```
 ecoclient access MyFile WR/
