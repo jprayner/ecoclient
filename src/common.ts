@@ -196,18 +196,28 @@ export const loadFileInfo = (localFilename: string): FileInfo | undefined => {
     return undefined;
   }
 
-  if (infoParts[1].length !== 8 || isNaN(parseInt(infoParts[1], 16))) {
+  if (isNaN(parseInt(infoParts[1], 16))) {
     return undefined;
   }
 
-  if (infoParts[2].length !== 8 || isNaN(parseInt(infoParts[2], 16))) {
+  if (isNaN(parseInt(infoParts[2], 16))) {
     return undefined;
   }
 
+  const rawLoadAddr = parseInt(infoParts[1], 16);
+  const inferredLoadAddr = infoParts[1].length === 6 && ((rawLoadAddr & 0xff0000) === 0xff0000)
+    ? (rawLoadAddr | 0xff000000) >>> 0
+    : rawLoadAddr;
+
+  const rawExecAddr = parseInt(infoParts[2], 16);
+  const inferredExecAddr = infoParts[2].length === 6 && ((rawExecAddr & 0xff0000) === 0xff0000)
+    ? (rawExecAddr | 0xff000000) >>> 0
+    : rawExecAddr;
+  
   return {
     originalFilename: infoParts[0],
-    loadAddr: parseInt(infoParts[1], 16),
-    execAddr: parseInt(infoParts[2], 16),
+    loadAddr: inferredLoadAddr,
+    execAddr: inferredExecAddr,
   };
 };
 
