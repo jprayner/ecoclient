@@ -35,16 +35,13 @@ export const promptOverwrite = async (
       case 'y':
       case 'Y':
         return true;
-        break;
       case 'a':
       case 'A':
         overwriteTracker.selectOverwriteAll();
         return true;
-        break;
       case 's':
       case 'S':
         return false;
-        break;
       case 'q':
       case 'Q':
         logProgress('');
