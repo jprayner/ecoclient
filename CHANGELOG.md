@@ -1,6 +1,16 @@
 # CHANGELOG.md
 
-## 2.0.13 (2023-07-16)
+## 2.0.15 (2023-07-18)
+
+Fixes:
+
+- None
+
+Features:
+
+- Add NEWUSER, REMUSER, PASS and PRIV commands
+
+## 2.0.14 (2023-07-16)
 
 Fixes:
 

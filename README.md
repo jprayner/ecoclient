@@ -83,10 +83,10 @@ ecoclient monitor
 
 Login to fileserver like a `*I AM` command. Directory handles (e.g. current directory) are persisted such that they take effect with other commands like `dir`.
 
-| Argument | Description                                 |
-| -------- | ------------------------------------------- |
-| username | Username registered known to the fileserver |
-| password | Password which corresponds to `username`    |
+| Argument | Description                                  |
+| -------- | -------------------------------------------- |
+| username | Registered username, known to the fileserver |
+| password | Password which corresponds to `username`     |
 
 Example:
 
@@ -263,4 +263,66 @@ Examples:
 ```
 ecoclient access MyFile WR/
 ecoclient access $.Games.MyFile WR/
+```
+
+## pass [oldPassword] [newPassword]
+
+Change password for current user.
+
+| Argument    | Description                                   |
+| ----------- | --------------------------------------------- |
+| oldPassword | Current password (or leave blank if none set) |
+| newPassword | New password (or leave blank to remove)       |
+
+Examples:
+
+```
+ecoclient pass MYPASS1 MYPASS2  # Normal use
+ecoclient pass '' MYPASS        # Handy for newly-created accounts
+ecoclient pass MYPASS ''        # Remove password
+```
+
+## newuser [username]
+
+Create a new user.
+
+| Argument | Description                                   |
+| -------- | --------------------------------------------- |
+| username | Username to be registered with the fileserver |
+
+Example:
+
+```
+ecoclient newuser ethel
+```
+
+## remuser [username]
+
+Remove an existing user.
+
+| Argument | Description                                  |
+| -------- | -------------------------------------------- |
+| username | Registered username, known to the fileserver |
+
+Example:
+
+```
+ecoclient remuser gertrude
+```
+
+## priv [username] [level]
+
+Set privilege level for specified user.
+
+| Argument | Description                                                                |
+| -------- | -------------------------------------------------------------------------- |
+| username | Registered username, known to the fileserver                               |
+| level    | `S` == System, `N` (or ommit) == Normal, others are system/level-dependent |
+
+Examples:
+
+```
+priv susan S   # let's be besties, have the keys to my front door
+priv brian     # screw this guy, bust him down to private
+priv adrian N  # screw this guy, bust him down to private
 ```

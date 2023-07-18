@@ -22,6 +22,10 @@ import { commandSave } from './command/save';
 import { commandCat } from './command/cat';
 import { commandCdir } from './command/cdir';
 import { commandAccess } from './command/access';
+import { commandNewUser } from './command/newUser';
+import { commandRemUser } from './command/remUser';
+import { commandPass } from './command/pass';
+import { commandPriv } from './command/priv';
 
 type CliOptions = {
   debug?: true | undefined;
@@ -238,6 +242,69 @@ program
       config.serverStation,
       remotePath,
       accessString,
+    );
+  });
+
+program
+  .command('newuser')
+  .description('create a new user account on fileserver')
+  .argument('<username>', 'username')
+  .action(async username => {
+    const config = await resolveConfig(program.opts());
+    await connectionWrapper(
+      commandNewUser,
+      config,
+      config.serverStation,
+      username,
+    );
+  });
+
+program
+  .command('remuser')
+  .description('remove a user account from fileserver')
+  .argument('<username>', 'username')
+  .action(async username => {
+    const config = await resolveConfig(program.opts());
+    await connectionWrapper(
+      commandRemUser,
+      config,
+      config.serverStation,
+      username,
+    );
+  });
+
+program
+  .command('pass')
+  .description('change password for current user')
+  .argument('<oldPassword>', 'old password')
+  .argument('<newPassword>', 'new password')
+  .action(async (oldPassword, newPassword) => {
+    const config = await resolveConfig(program.opts());
+    await connectionWrapper(
+      commandPass,
+      config,
+      config.serverStation,
+      oldPassword,
+      newPassword,
+    );
+  });
+
+program
+  .command('priv')
+  .description('assign privilege level to user')
+  .argument('<username>', 'username')
+  .argument(
+    '[privilegeChar]',
+    '"S" == System, "N" (or ommit) == Normal, others are system/level-dependent',
+  )
+  .action(async (username, privilegeChar) => {
+    const config = await resolveConfig(program.opts());
+    await connectionWrapper(
+      commandPriv,
+      config,
+      config.serverStation,
+      username,
+      privilegeChar?.toUpperCase() ?? 'N',
     );
   });
 
