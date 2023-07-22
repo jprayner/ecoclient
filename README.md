@@ -28,7 +28,6 @@ This project is still under development. Currently:
 
 - Most fileserver testing has been against a Level 3 (BBC) fileserver although a Level 4 fileserver (Archimedes) and [PiEconetBridge fileserver](https://github.com/cr12925/PiEconetBridge) have also been used. User testing suggests that an Acorn Filestore also works (with floppy disks).
 - Most host OS testing has been performed on a Mac, although Linux and Windows have also been tried successfully.
-- More fileserver commands to be supported soon e.g. `SDISC`, `PASS` etc.
 
 ## Commands
 
@@ -119,7 +118,7 @@ ecoclient dir $.Library
 ecoclient dir subdir
 ```
 
-## get [filename]
+## get [pathPattern]
 
 Download the specified file(s) to the current directory of the local host. Load and execution addresses are optionally persisted in the local filename or an `.inf` file (see `set-metadata` command).
 
@@ -130,9 +129,9 @@ The `*` wildcard matches multiple characters whereas the `?` wildcard matches a 
 | `--recurse`, `-r` | Recurse into matching directories.                             |
 | `--force`, `-f`   | Force overwrite of pre-existing local files without prompting. |
 
-| Argument | Description                                                                                                        |
-| -------- | ------------------------------------------------------------------------------------------------------------------ |
-| filename | Name of remote file. May be relative to current directory or prefixed with `$.` if relative to the root directory. |
+| Argument    | Description                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| pathPattern | Name of remote file(s)/dir(s). May be relative to current directory, prefixed with `$.` if relative to the root directory etc. |
 
 Examples:
 
@@ -144,9 +143,9 @@ ecoclient get -r MyDir
 ecoclient get -rf MyDir
 ```
 
-## put [filename]
+## put [pathPattern]
 
-Upload the specified file(s) from the host machine to the current directory on the server. Sets load/execution addresses if embedded in filename or found in a corresponding `.inf` file (see `set-metadata` command).
+Upload the specified file(s)/dir(s) from the host machine to the current directory on the server. Sets load/execution addresses if embedded in filename or found in a corresponding `.inf` file (see `set-metadata` command).
 
 The `*` wildcard matches multiple characters whereas the `?` wildcard matches a single character. Use the recurse option to copy directories.
 
@@ -155,9 +154,9 @@ The `*` wildcard matches multiple characters whereas the `?` wildcard matches a 
 | `--recurse`, `-r` | Recurse into matching directories.                              |
 | `--force`, `-f`   | Force overwrite of pre-existing remote files without prompting. |
 
-| Argument | Description         |
-| -------- | ------------------- |
-| filename | Name of local file. |
+| Argument    | Description                                                                                                                   |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| pathPattern | Name of local file(s)/dir(s). May be relative to current directory, prefixed with `$.` if relative to the root directory etc. |
 
 Examples:
 
@@ -234,19 +233,31 @@ ecoclient cdir Subdir
 ecoclient cdir $.Subdir
 ```
 
-## delete [path]
+## delete [pathPattern]
 
-Deletes a file or directory.
+Deletes the specified file(s) and dir(s).
 
-| Argument | Description                                                                                                                                   |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| path     | File or directory path: may be relative to the current directory or prefixed with `$.` to delete a directory relative to the fileserver root. |
+The `*` wildcard matches multiple characters whereas the `?` wildcard matches a single character. Use the recurse option to delete directories.
+
+| Option            | Description                                |
+| ----------------- | ------------------------------------------ |
+| `--recurse`, `-r` | Recurse into matching directories.         |
+| `--force`, `-f`   | Force deletion of files without prompting. |
+
+| Argument    | Description                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| pathPattern | Name of remote file(s)/dir(s). May be relative to current directory, prefixed with `$.` if relative to the root directory etc. |
 
 Examples:
 
 ```
 ecoclient delete MyFile
+ecoclient delete --force MyFile
+ecoclient delete -f MyFile
 ecoclient delete $.Games.MyFile
+ecoclient delete -f 'My*'
+ecoclient delete --recurse 'MyDir'
+ecoclient delete -rf 'MyDir'
 ```
 
 ## access [path] [accessString]

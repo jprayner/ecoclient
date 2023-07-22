@@ -130,31 +130,41 @@ program
 
 program
   .command('delete')
-  .description('delete file on fileserver')
-  .argument('<path>', 'file path')
-  .action(async filePath => {
+  .description('delete file(s) from fileserver')
+  .argument(
+    '<pathPattern>',
+    'path for file(s)/dir(s) to get (* matches multiple chars, ? matches single char)',
+  )
+  .option('-r, --recurse', 'recurse subdirectories')
+  .option('-f, --force', 'force deletion without prompting')
+  .action(async (pathPattern, commandOpts) => {
     const config = await resolveConfig(program.opts());
     await connectionWrapper(
       commandDelete,
       config,
       config.serverStation,
-      filePath,
+      pathPattern,
+      commandOpts.recurse || false,
+      commandOpts.force || false,
     );
   });
 
 program
   .command('get')
-  .description('get file from fileserver using "LOAD" command')
-  .argument('<filename>', 'filename')
+  .description('get file(s)/dir(s) from fileserver using "LOAD" command')
+  .argument(
+    '<pathPattern>',
+    'path for file(s)/dir(s) to get (* matches multiple chars, ? matches single char)',
+  )
   .option('-r, --recurse', 'recurse subdirectories')
   .option('-f, --force', 'force overwrite of existing files')
-  .action(async (filename, commandOpts) => {
+  .action(async (pathPattern, commandOpts) => {
     const config = await resolveConfig(program.opts());
     await connectionWrapper(
       commandGet,
       config,
       config.serverStation,
-      filename,
+      pathPattern,
       commandOpts.recurse || false,
       commandOpts.force || false,
     );
@@ -162,17 +172,20 @@ program
 
 program
   .command('put')
-  .description('put file to fileserver using "SAVE" command')
-  .argument('<filename>', 'filename')
+  .description('put file(s)/dir(s) to fileserver using "SAVE" command')
+  .argument(
+    '<pathPattern>',
+    'path for file(s)/dir(s) to get (* matches multiple chars, ? matches single char)',
+  )
   .option('-r, --recurse', 'recurse subdirectories')
   .option('-f, --force', 'force overwrite of existing files')
-  .action(async (filename, commandOpts) => {
+  .action(async (pathPattern, commandOpts) => {
     const config = await resolveConfig(program.opts());
     await connectionWrapper(
       commandPut,
       config,
       config.serverStation,
-      filename,
+      pathPattern,
       commandOpts.recurse || false,
       commandOpts.force || false,
     );

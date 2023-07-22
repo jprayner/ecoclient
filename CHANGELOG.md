@@ -1,5 +1,15 @@
 # CHANGELOG.md
 
+## 2.0.16 (2023-07-22)
+
+Fixes:
+
+- None
+
+Features:
+
+- Add support for wildcards and recursion (inc. `--force`, `--recurse`) flags to DELETE command
+
 ## 2.0.15 (2023-07-18)
 
 Fixes:
