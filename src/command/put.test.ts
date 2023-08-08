@@ -9,6 +9,11 @@ import {
 import * as fs from 'fs';
 import { commandPut } from './put';
 import { promptOverwrite } from '../util/overwriteUtils';
+import {
+  DfsDiskSide,
+  parseDoubleSidedDiskImage,
+  parseSingleSidedDiskImage,
+} from '../diskimg/dfs';
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-return
 jest.mock('fs', () => ({
@@ -22,6 +27,7 @@ jest.mock('../protocol/objectInfo');
 jest.mock('../protocol/save');
 jest.mock('../protocol/examine');
 jest.mock('../util/overwriteUtils');
+jest.mock('../diskimg/dfs');
 
 const readAccessObjectInfoMock = jest.mocked(readAccessObjectInfo);
 const getHandlesMock = jest.mocked(getHandles);
@@ -30,6 +36,8 @@ const saveMock = jest.mocked(save);
 const promptOverwriteMock = jest.mocked(promptOverwrite);
 const isValidLoadExecFilenameMock = jest.mocked(isLoadExecFilename);
 const fileInfoFromFilenameMock = jest.mocked(fileInfoFromFilename);
+const parseDoubleSidedDiskImageMock = jest.mocked(parseDoubleSidedDiskImage);
+const parseSingleSidedDiskImageMock = jest.mocked(parseSingleSidedDiskImage);
 
 describe('commandPut', () => {
   beforeEach(() => {
@@ -418,6 +426,199 @@ describe('commandPut', () => {
         254,
         Buffer.from([1, 2, 3]),
         'MYDIR.MYFILE2',
+        0xffffffff,
+        0xffffffff,
+        {
+          userRoot: 1,
+          current: 2,
+          library: 3,
+        },
+      );
+    });
+  });
+
+  describe('dfs disk image upload', () => {
+    it('should successfully upload contents of .ssd file', async () => {
+      getHandlesMock.mockResolvedValue({
+        userRoot: 1,
+        current: 2,
+        library: 3,
+      });
+
+      jest.spyOn(fs, 'existsSync').mockImplementation(() => true);
+      jest.spyOn(fs, 'readdirSync').mockImplementation(() => [
+        {
+          isFile: () => true,
+          isDirectory: () => false,
+          isBlockDevice: () => false,
+          isCharacterDevice: () => false,
+          isFIFO: () => false,
+          isSocket: () => false,
+          isSymbolicLink: () => false,
+          name: 'MYFILE1',
+        },
+        {
+          isFile: () => true,
+          isDirectory: () => false,
+          isBlockDevice: () => false,
+          isCharacterDevice: () => false,
+          isFIFO: () => false,
+          isSocket: () => false,
+          isSymbolicLink: () => false,
+          name: 'MYFILE2',
+        },
+        {
+          isFile: () => true,
+          isDirectory: () => false,
+          isBlockDevice: () => false,
+          isCharacterDevice: () => false,
+          isFIFO: () => false,
+          isSocket: () => false,
+          isSymbolicLink: () => false,
+          name: 'IGNOREME',
+        },
+      ]);
+      mockLstat(['archive.ssd', 'MYFILE1', 'MYFILE2']);
+
+      readAccessObjectInfoMock.mockResolvedValue({
+        fileExists: false,
+        access: null,
+      });
+      jest
+        .spyOn(fs, 'readFileSync')
+        .mockImplementation(() => Buffer.from([1, 2, 3]));
+
+      parseSingleSidedDiskImageMock.mockReturnValue(
+        new DfsDiskSide('archive.ssd', 0),
+      );
+
+      await commandPut(254, 'archive.ssd', false, false);
+
+      expect(saveMock).toHaveBeenCalledWith(
+        254,
+        Buffer.from([1, 2, 3]),
+        'MYFILE1',
+        0xffffffff,
+        0xffffffff,
+        {
+          userRoot: 1,
+          current: 2,
+          library: 3,
+        },
+      );
+      expect(saveMock).toHaveBeenCalledWith(
+        254,
+        Buffer.from([1, 2, 3]),
+        'MYFILE2',
+        0xffffffff,
+        0xffffffff,
+        {
+          userRoot: 1,
+          current: 2,
+          library: 3,
+        },
+      );
+    });
+
+    it('should successfully upload contents of .dsd file', async () => {
+      getHandlesMock.mockResolvedValue({
+        userRoot: 1,
+        current: 2,
+        library: 3,
+      });
+
+      jest.spyOn(fs, 'existsSync').mockImplementation(() => true);
+      jest.spyOn(fs, 'readdirSync').mockReturnValueOnce([
+        {
+          isFile: () => false,
+          isDirectory: () => true,
+          isBlockDevice: () => false,
+          isCharacterDevice: () => false,
+          isFIFO: () => false,
+          isSocket: () => false,
+          isSymbolicLink: () => false,
+          name: '0',
+        },
+        {
+          isFile: () => false,
+          isDirectory: () => true,
+          isBlockDevice: () => false,
+          isCharacterDevice: () => false,
+          isFIFO: () => false,
+          isSocket: () => false,
+          isSymbolicLink: () => false,
+          name: '1',
+        },
+      ]);
+      jest.spyOn(fs, 'readdirSync').mockReturnValueOnce([
+        {
+          isFile: () => true,
+          isDirectory: () => false,
+          isBlockDevice: () => false,
+          isCharacterDevice: () => false,
+          isFIFO: () => false,
+          isSocket: () => false,
+          isSymbolicLink: () => false,
+          name: 'MYFILE1',
+        },
+      ]);
+      jest.spyOn(fs, 'readdirSync').mockReturnValueOnce([
+        {
+          isFile: () => true,
+          isDirectory: () => false,
+          isBlockDevice: () => false,
+          isCharacterDevice: () => false,
+          isFIFO: () => false,
+          isSocket: () => false,
+          isSymbolicLink: () => false,
+          name: 'MYFILE2',
+        },
+      ]);
+      mockLstat(['archive.dsd', 'MYFILE1', 'MYFILE2']);
+
+      readAccessObjectInfoMock.mockImplementation(
+        (serverStation: number, remotePath: string) => {
+          if (remotePath.toString() === '0' || remotePath.toString() === '1') {
+            return Promise.resolve({
+              fileExists: true,
+              access: 'DWR/R',
+            });
+          } else {
+            return Promise.resolve({
+              fileExists: false,
+              access: null,
+            });
+          }
+        },
+      );
+
+      jest
+        .spyOn(fs, 'readFileSync')
+        .mockImplementation(() => Buffer.from([1, 2, 3]));
+
+      parseDoubleSidedDiskImageMock.mockReturnValue([
+        new DfsDiskSide('archive1', 0),
+        new DfsDiskSide('archive2', 0),
+      ]);
+
+      await commandPut(254, 'archive.dsd', true, false);
+
+      expect(saveMock).toHaveBeenCalledWith(
+        254,
+        Buffer.from([1, 2, 3]),
+        '0.MYFILE1',
+        0xffffffff,
+        0xffffffff,
+        {
+          userRoot: 1,
+          current: 2,
+          library: 3,
+        },
+      );
+      expect(saveMock).toHaveBeenCalledWith(
+        254,
+        Buffer.from([1, 2, 3]),
+        '1.MYFILE2',
         0xffffffff,
         0xffffffff,
         {

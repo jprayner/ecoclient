@@ -15,8 +15,48 @@ import {
   FileType,
   promptOverwrite,
 } from '../util/overwriteUtils';
+import {
+  parseDoubleSidedDiskImage,
+  parseSingleSidedDiskImage,
+} from '../diskimg/dfs';
+import { tmpdir } from 'os';
+import { chdir } from 'process';
 
 const MAX_RETRIES = 3;
+
+const putDfsImage = async (
+  serverStation: number,
+  localImagePath: string,
+  remotePath: string,
+  isDoubleSided: boolean,
+  overwriteTracker: FileOverwriteTracker,
+) => {
+  const buffer = fs.readFileSync(localImagePath);
+  const diskSides = isDoubleSided
+    ? parseDoubleSidedDiskImage(buffer)
+    : [parseSingleSidedDiskImage(buffer)];
+
+  const extractPath = fs.mkdtempSync(path.join(tmpdir(), 'ecoclient-'));
+  try {
+    const originalDir = process.cwd();
+    chdir(extractPath);
+
+    if (isDoubleSided) {
+      fs.mkdirSync(path.join(extractPath, '0'));
+      fs.mkdirSync(path.join(extractPath, '1'));
+      diskSides[0].extractFiles(path.join(extractPath, '0'));
+      diskSides[1].extractFiles(path.join(extractPath, '1'));
+    } else {
+      diskSides[0].extractFiles(extractPath);
+    }
+
+    await putMultipleFiles(serverStation, '.', '*', '', true, overwriteTracker);
+
+    chdir(originalDir);
+  } finally {
+    fs.rmSync(extractPath, { recursive: true });
+  }
+};
 
 export const commandPut = async (
   serverStation: number,
@@ -44,7 +84,27 @@ export const commandPut = async (
     throw new Error(`File not found: ${localPath}`);
   }
 
-  if (fs.lstatSync(localPath).isDirectory()) {
+  if (fs.lstatSync(localPath).isFile()) {
+    if (
+      parsedPath.ext.toLowerCase() === '.ssd' ||
+      parsedPath.ext.toLowerCase() === '.dsd'
+    ) {
+      await putDfsImage(
+        serverStation,
+        localPath,
+        '',
+        parsedPath.ext.toLowerCase() === '.dsd',
+        overwriteTracker,
+      );
+    } else {
+      await putSingleFileWithRetries(
+        serverStation,
+        localPath,
+        '',
+        overwriteTracker,
+      );
+    }
+  } else if (fs.lstatSync(localPath).isDirectory()) {
     const remoteDir = parsedPath.base; // TODO: prepend remote path if specified
     if (!recurse) {
       throw new Error(`'${localPath}' is a directory, specify -r to recurse`);
@@ -81,15 +141,9 @@ export const commandPut = async (
       recurse,
       overwriteTracker,
     );
-    return;
+  } else {
+    throw new Error(`Not a file or directory: ${localPath}`);
   }
-
-  await putSingleFileWithRetries(
-    serverStation,
-    localPath,
-    '',
-    overwriteTracker,
-  );
 };
 
 const putMultipleFiles = async (
@@ -204,7 +258,7 @@ const putSingleFileWithRetries = async (
     path.basename(localFilePath),
   );
   if (!isValidFilename && !isValidLoadExecFilename) {
-    console.log(`Skipping2 '${localFilePath}' (not a valid Econet filename)`);
+    console.log(`Skipping '${localFilePath}' (not a valid Econet filename)`);
     return;
   }
 

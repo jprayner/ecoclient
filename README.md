@@ -149,6 +149,8 @@ Upload the specified file(s)/dir(s) from the host machine to the current directo
 
 The `*` wildcard matches multiple characters whereas the `?` wildcard matches a single character. Use the recurse option to copy directories.
 
+The contents of DFS disk images may be uploaded by specifying a file with a `.ssd` or `.dsd` extension.
+
 | Option            | Description                                                     |
 | ----------------- | --------------------------------------------------------------- |
 | `--recurse`, `-r` | Recurse into matching directories.                              |
@@ -166,6 +168,7 @@ ecoclient put 'My*'
 ecoclient put Games/MyFile
 ecoclient put -r MyDir
 ecoclient put -rf MyDir
+ecoclient put games.ssd
 ```
 
 ## load [filename]

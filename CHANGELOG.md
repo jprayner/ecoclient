@@ -1,5 +1,15 @@
 # CHANGELOG.md
 
+## 2.0.17 (2023-08-08)
+
+Fixes:
+
+- None
+
+Features:
+
+- Upload of DFS disk image contents (.ssd and .dsd files) using PUT command
+
 ## 2.0.16 (2023-07-22)
 
 Fixes:
